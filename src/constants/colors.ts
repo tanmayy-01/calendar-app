@@ -1,5 +1,21 @@
-export const LIGHT_COLORS = {
+
+export const CALENDAR_COLORS = {
+  background: '#191211',
+  headerBackground: '#191211',
+  surface: '#221B1A',
+  gridBorder: '#2E2726',
+  textPrimary: '#EBE5E4',
+  textDimmed: '#736967',
+  textSecondary: '#A99E9C',
+  todayBadge: '#F6A592',
+  todayText: '#1E1210',
+  eventPill: '#3EA898',
+  eventPillAlt: '#449487',
+  eventText: '#FFFFFF',
+  fabBackground: '#523B36',
+  fabIcon: '#F8C5B9',
+  avatarBorder: '#4A3B39',
   white: '#FFFFFF',
   black: '#000000',
-  background: '#FFFFFF',
 } as const;
+
