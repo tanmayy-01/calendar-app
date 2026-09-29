@@ -1,22 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CALENDAR_COLORS, ICON_NAMES } from '@/constants';
+import {
+  CALENDAR_COLORS,
+  FONT_SIZES,
+  FONT_WEIGHTS,
+  ICON_NAMES,
+} from '@/constants';
 import { IconProvider } from '@/lib/icons';
 import { scale } from '@/lib/scale';
-
-interface CalendarHeaderProps {
-  title: string;
-  onPressMenu?: () => void;
-  onPressSearch?: () => void;
-  onPressToday?: () => void;
-  onPressProfile?: () => void;
-}
+import { CalendarHeaderProps } from '@/types';
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = React.memo(
   ({ title, onPressMenu, onPressSearch, onPressToday, onPressProfile }) => {
     return (
       <View style={styles.container}>
-        {/* Left Side: Hamburger Menu & Month Title */}
+        {/* Hamburger Menu & Month Title */}
         <View style={styles.leftSection}>
           <TouchableOpacity
             style={styles.iconButton}
@@ -35,7 +33,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = React.memo(
           </Text>
         </View>
 
-        {/* Right Side: Search, Today Jump, Profile Avatar */}
+        {/* Search, Today Jump, Profile Avatar */}
         <View style={styles.rightSection}>
           <TouchableOpacity
             style={styles.iconButton}
@@ -80,7 +78,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = React.memo(
         </View>
       </View>
     );
-  }
+  },
 );
 
 CalendarHeader.displayName = 'CalendarHeader';
@@ -100,8 +98,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: scale.ms(18),
-    fontWeight: '600',
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semibold,
     color: CALENDAR_COLORS.textPrimary,
     marginLeft: scale.w(10),
     letterSpacing: 0.2,

@@ -15,16 +15,15 @@ import {
   AddEventModal,
 } from './components';
 import {
-  CalendarDay,
-  CalendarEvent,
   TOTAL_MONTHS_COUNT,
   INITIAL_MONTH_INDEX,
   getDateForPageIndex,
   formatMonthHeaderTitle,
   formatDateString,
-} from './utils/calendarUtils';
+} from '../../utils/calendar';
 import { getInitialEvents } from './data/dummyEvents';
-import { styles } from './Calendar.types';
+import { styles } from './Calendar.styles';
+import { CalendarDay, CalendarEvent } from '@/types';
 
 const Calendar: React.FC = () => {
   const { width } = useWindowDimensions();
@@ -152,7 +151,7 @@ const Calendar: React.FC = () => {
         onPressProfile={() => Alert.alert('Profile', 'Account settings')}
       />
 
-      {/* Weekday Header Row (S M T W T F S) */}
+      {/* Weekday Header Row */}
       <WeekdayHeader />
 
       {/* Horizontal Swiping Months Pager */}

@@ -1,3 +1,4 @@
 export const SCREEN_NAMES = {
-    CALENDAR: 'Calendar'
+    CALENDAR: 'Calendar',
+    TASK: 'Task'
 } as const;

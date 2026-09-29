@@ -1,16 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CalendarDay } from '../utils/calendarUtils';
-import { CALENDAR_COLORS } from '@/constants';
+import { CALENDAR_COLORS, FONT_SIZES, FONT_WEIGHTS } from '@/constants';
 import { scale } from '@/lib/scale';
-
-interface DayCellProps {
-  day: CalendarDay;
-  isLastColumn?: boolean;
-  isLastRow?: boolean;
-  isSelected?: boolean;
-  onPress?: (day: CalendarDay) => void;
-}
+import { DayCellProps } from '@/types';
 
 export const DayCell: React.FC<DayCellProps> = React.memo(
   ({ day, isLastColumn, isLastRow, isSelected, onPress }) => {
@@ -92,7 +84,7 @@ const styles = StyleSheet.create({
     borderBottomColor: CALENDAR_COLORS.gridBorder,
   },
   selectedBackground: {
-    backgroundColor: 'rgba(246, 165, 146, 0.08)',
+    backgroundColor: CALENDAR_COLORS.select_background,
   },
   headerRow: {
     alignItems: 'center',
@@ -108,8 +100,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   todayText: {
-    fontSize: scale.ms(12),
-    fontWeight: '700',
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
     color: CALENDAR_COLORS.todayText,
   },
   normalDayWrapper: {
@@ -119,8 +111,8 @@ const styles = StyleSheet.create({
     minHeight: scale.h(20),
   },
   dayText: {
-    fontSize: scale.ms(12),
-    fontWeight: '400',
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.regular,
   },
   currentMonthText: {
     color: CALENDAR_COLORS.textPrimary,
@@ -142,7 +134,7 @@ const styles = StyleSheet.create({
   },
   eventText: {
     fontSize: scale.ms(9),
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHTS.semibold,
     color: CALENDAR_COLORS.eventText,
   },
   moreEventsText: {

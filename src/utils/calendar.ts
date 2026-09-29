@@ -1,35 +1,5 @@
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string; // 'YYYY-MM-DD'
-  color?: string;
-}
-
-export interface CalendarDay {
-  date: Date;
-  dateString: string;
-  dayNumber: number;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  events: CalendarEvent[];
-}
-
-export const DAYS_OF_WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
-
-export const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
+import { MONTH_NAMES } from "@/constants";
+import { CalendarDay, CalendarEvent } from "@/types";
 
 /**
  * Configure swipe direction behavior:

@@ -7,17 +7,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { CALENDAR_COLORS } from '@/constants';
+import { CALENDAR_COLORS, FONT_SIZES, FONT_WEIGHTS } from '@/constants';
 import { scale } from '@/lib/scale';
+import { AddEventModalProps } from '@/types';
+import { isIOS } from '@/utils';
 
-interface AddEventModalProps {
-  visible: boolean;
-  selectedDateString: string;
-  onClose: () => void;
-  onAddEvent: (title: string, dateString: string) => void;
-}
+
 
 export const AddEventModal: React.FC<AddEventModalProps> = ({
   visible,
@@ -43,7 +39,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={isIOS ? 'padding' : undefined}
         style={styles.overlay}
       >
         <View style={styles.card}>
@@ -85,7 +81,7 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: CALENDAR_COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: scale.w(24),
@@ -99,8 +95,8 @@ const styles = StyleSheet.create({
     borderColor: CALENDAR_COLORS.gridBorder,
   },
   modalTitle: {
-    fontSize: scale.ms(18),
-    fontWeight: '700',
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
     color: CALENDAR_COLORS.textPrimary,
   },
   dateSubtitle: {
@@ -115,7 +111,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale.w(12),
     paddingVertical: scale.h(10),
     color: CALENDAR_COLORS.textPrimary,
-    fontSize: scale.ms(14),
+    fontSize: FONT_SIZES.sm,
     borderWidth: 1,
     borderColor: CALENDAR_COLORS.gridBorder,
     marginBottom: scale.h(20),
@@ -135,15 +131,15 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     color: CALENDAR_COLORS.textSecondary,
-    fontSize: scale.ms(14),
-    fontWeight: '600',
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semibold,
   },
   saveBtn: {
     backgroundColor: CALENDAR_COLORS.todayBadge,
   },
   saveBtnText: {
     color: CALENDAR_COLORS.todayText,
-    fontSize: scale.ms(14),
-    fontWeight: '700',
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
   },
 });

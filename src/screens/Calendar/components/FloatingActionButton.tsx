@@ -3,13 +3,10 @@ import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { CALENDAR_COLORS, ICON_NAMES } from '@/constants';
 import { IconProvider } from '@/lib/icons';
 import { scale } from '@/lib/scale';
+import { FloatingActionButtonProps } from '@/types';
 
-interface FloatingActionButtonProps {
-  onPress?: () => void;
-}
-
-export const FloatingActionButton: React.FC<FloatingActionButtonProps> = React.memo(
-  ({ onPress }) => {
+export const FloatingActionButton: React.FC<FloatingActionButtonProps> =
+  React.memo(({ onPress }) => {
     return (
       <TouchableOpacity
         style={styles.container}
@@ -24,8 +21,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = React.m
         />
       </TouchableOpacity>
     );
-  }
-);
+  });
 
 FloatingActionButton.displayName = 'FloatingActionButton';
 
@@ -42,7 +38,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#000000',
+        shadowColor: CALENDAR_COLORS.black,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.35,
         shadowRadius: 6,

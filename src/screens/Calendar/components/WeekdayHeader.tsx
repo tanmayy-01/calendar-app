@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { DAYS_OF_WEEK } from '../utils/calendarUtils';
-import { CALENDAR_COLORS } from '@/constants';
+import { CALENDAR_COLORS, DAYS_OF_WEEK, FONT_WEIGHTS } from '@/constants';
 import { scale } from '@/lib/scale';
 
 export const WeekdayHeader: React.FC = React.memo(() => {
@@ -34,7 +33,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     fontSize: scale.ms(11),
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHTS.semibold,
     color: CALENDAR_COLORS.textSecondary,
     letterSpacing: 0.5,
   },

@@ -1,4 +1,4 @@
-import { CalendarEvent, formatDateString } from '../utils/calendarUtils';
+import { CalendarEvent, formatDateString } from '../../../utils/calendar';
 
 /**
  * Generates sample festival & calendar events resembling the reference design.

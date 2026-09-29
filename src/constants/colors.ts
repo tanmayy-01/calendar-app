@@ -1,4 +1,3 @@
-
 export const CALENDAR_COLORS = {
   background: '#191211',
   headerBackground: '#191211',
@@ -17,5 +16,7 @@ export const CALENDAR_COLORS = {
   avatarBorder: '#4A3B39',
   white: '#FFFFFF',
   black: '#000000',
+  select_background: 'rgba(246, 165, 146, 0.08)',
+  overlay: 'rgba(0, 0, 0, 0.65)'
 } as const;
 

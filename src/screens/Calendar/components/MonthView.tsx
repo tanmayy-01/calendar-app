@@ -1,16 +1,10 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { CalendarDay, CalendarEvent, getDaysInMonthGrid } from '../utils/calendarUtils';
 import { DayCell } from './DayCell';
 import { CALENDAR_COLORS } from '@/constants';
+import { CalendarDay, MonthViewProps } from '@/types';
+import { getDaysInMonthGrid } from '@/utils';
 
-interface MonthViewProps {
-  date: Date;
-  eventsMap: Record<string, CalendarEvent[]>;
-  selectedDateString?: string;
-  onSelectDay?: (day: CalendarDay) => void;
-  width: number;
-}
 
 export const MonthView: React.FC<MonthViewProps> = React.memo(
   ({ date, eventsMap, selectedDateString, onSelectDay, width }) => {

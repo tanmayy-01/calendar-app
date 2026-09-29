@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SCREEN_NAMES } from '@/constants';
 import Calendar from '@/screens/Calendar';
+import Task from '@/screens/Task';
 
 
 const Stack = createNativeStackNavigator();
@@ -22,7 +23,7 @@ const AppNavigation: React.FC<AppNavigationProps> = ({
       }}
     >
       <Stack.Screen name={SCREEN_NAMES.CALENDAR} component={Calendar} />
-     
+      <Stack.Screen name={SCREEN_NAMES.TASK} component={Task} />
     </Stack.Navigator>
   );
 };
