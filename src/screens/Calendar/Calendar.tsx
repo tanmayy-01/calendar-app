@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -14,44 +14,71 @@ import {
   FloatingActionButton,
   AddEventModal,
 } from './components';
-import {
-  TOTAL_MONTHS_COUNT,
-  INITIAL_MONTH_INDEX,
-  getDateForPageIndex,
-  formatMonthHeaderTitle,
-  formatDateString,
-} from '../../utils/calendar';
-import { getInitialEvents } from './data/dummyEvents';
+
+import { getInitialHolidays, getHolidaysForYears } from '@/services';
 import { styles } from './Calendar.styles';
 import { CalendarDay, CalendarEvent } from '@/types';
+import {
+  formatDateString,
+  formatMonthHeaderTitle,
+  getDateForPageIndex,
+  INITIAL_MONTH_INDEX,
+  TOTAL_MONTHS_COUNT,
+} from '@/utils';
 
 const Calendar: React.FC = () => {
   const { width } = useWindowDimensions();
   const flatListRef = useRef<FlatList<number>>(null);
 
-  // Reference base date (app launch time)
   const baseDate = useMemo(() => new Date(), []);
 
-  // Currently visible month in the header
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(baseDate);
 
-  // Selected date (defaults to today's date formatted as YYYY-MM-DD)
+  // Selected date (YYYY-MM-DD)
   const [selectedDateString, setSelectedDateString] = useState<string>(
-    formatDateString(baseDate)
+    formatDateString(baseDate),
   );
 
-  // Event dictionary keyed by 'YYYY-MM-DD'
+  // Event dictionary keyed by 'YYYY-MM-DD', initialized with instant offline festivals
   const [eventsMap, setEventsMap] = useState<Record<string, CalendarEvent[]>>(
-    () => getInitialEvents()
+    () => getInitialHolidays(),
   );
 
-  // Event creation modal visibility
+  // Track loaded years to prevent redundant fetches
+  const loadedYearsRef = useRef<Set<number>>(new Set([baseDate.getFullYear()]));
+
+  // Dynamically load real-time festivals/holidays for current and adjacent years
+  useEffect(() => {
+    const currentYear = currentMonthDate.getFullYear();
+    const adjacentYears = [currentYear - 1, currentYear, currentYear + 1];
+    const missingYears = adjacentYears.filter((y) => !loadedYearsRef.current.has(y));
+
+    if (missingYears.length === 0) return;
+
+    missingYears.forEach((y) => loadedYearsRef.current.add(y));
+
+    getHolidaysForYears(missingYears).then((newHolidays) => {
+      setEventsMap((prev) => {
+        const merged = { ...prev };
+        for (const [dateStr, holidayList] of Object.entries(newHolidays)) {
+          const existing = merged[dateStr] || [];
+          const existingTitles = new Set(existing.map((e) => e.title));
+          const toAdd = holidayList.filter((h) => !existingTitles.has(h.title));
+          if (toAdd.length > 0) {
+            merged[dateStr] = [...existing, ...toAdd];
+          }
+        }
+        return merged;
+      });
+    });
+  }, [currentMonthDate]);
+
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   // Array of page indices for virtualized months list
   const pages = useMemo(
     () => Array.from({ length: TOTAL_MONTHS_COUNT }, (_, i) => i),
-    []
+    [],
   );
 
   const handleSelectDay = useCallback((day: CalendarDay) => {
@@ -68,23 +95,20 @@ const Calendar: React.FC = () => {
     setSelectedDateString(formatDateString(today));
   }, []);
 
-  const handleAddEvent = useCallback(
-    (title: string, dateString: string) => {
-      setEventsMap((prev) => {
-        const existing = prev[dateString] || [];
-        const newEvent: CalendarEvent = {
-          id: `${dateString}-${Date.now()}`,
-          title,
-          date: dateString,
-        };
-        return {
-          ...prev,
-          [dateString]: [...existing, newEvent],
-        };
-      });
-    },
-    []
-  );
+  const handleAddEvent = useCallback((title: string, dateString: string) => {
+    setEventsMap(prev => {
+      const existing = prev[dateString] || [];
+      const newEvent: CalendarEvent = {
+        id: `${dateString}-${Date.now()}`,
+        title,
+        date: dateString,
+      };
+      return {
+        ...prev,
+        [dateString]: [...existing, newEvent],
+      };
+    });
+  }, []);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -95,20 +119,17 @@ const Calendar: React.FC = () => {
         setCurrentMonthDate(monthDate);
       }
     },
-    [width, baseDate]
+    [width, baseDate],
   );
 
-  const handleScrollToIndexFailed = useCallback(
-    (info: { index: number }) => {
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({
-          index: info.index,
-          animated: false,
-        });
-      }, 100);
-    },
-    []
-  );
+  const handleScrollToIndexFailed = useCallback((info: { index: number }) => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({
+        index: info.index,
+        animated: false,
+      });
+    }, 100);
+  }, []);
 
   const renderItem = useCallback(
     ({ item: pageIndex }: { item: number }) => {
@@ -123,12 +144,12 @@ const Calendar: React.FC = () => {
         />
       );
     },
-    [baseDate, eventsMap, selectedDateString, handleSelectDay, width]
+    [baseDate, eventsMap, selectedDateString, handleSelectDay, width],
   );
 
   const keyExtractor = useCallback(
     (pageIndex: number) => `month-page-${pageIndex}`,
-    []
+    [],
   );
 
   const getItemLayout = useCallback(
@@ -137,7 +158,7 @@ const Calendar: React.FC = () => {
       offset: width * index,
       index,
     }),
-    [width]
+    [width],
   );
 
   return (
@@ -146,7 +167,9 @@ const Calendar: React.FC = () => {
       <CalendarHeader
         title={formatMonthHeaderTitle(currentMonthDate)}
         onPressMenu={() => Alert.alert('Menu', 'Calendar navigation options')}
-        onPressSearch={() => Alert.alert('Search', 'Search for events and tasks')}
+        onPressSearch={() =>
+          Alert.alert('Search', 'Search for events and tasks')
+        }
         onPressToday={handleJumpToToday}
         onPressProfile={() => Alert.alert('Profile', 'Account settings')}
       />

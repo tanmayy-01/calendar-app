@@ -14,3 +14,10 @@ export const MONTH_NAMES = [
   'November',
   'December',
 ] as const;
+
+export const DEFAULT_COUNTRY_CODE = 'IN';
+
+export const NAGER_DATE_URL = 'https://date.nager.at/api/v3/PublicHolidays';
+
+export const BHARAT_CALENDAR_URL =
+  'https://jayantur13.github.io/calendar-bharat/calendar';

@@ -11,6 +11,8 @@ export interface CalendarEvent {
   title: string;
   date: string; // 'YYYY-MM-DD'
   color?: string;
+  isHoliday?: boolean;
+  holidayType?: 'Public' | 'Festival' | 'Observance' | 'User';
 }
 
 export interface CalendarDay {
@@ -47,4 +49,14 @@ export interface AddEventModalProps {
   selectedDateString: string;
   onClose: () => void;
   onAddEvent: (title: string, dateString: string) => void;
+}
+
+export interface NagerHoliday {
+  date: string; // 'YYYY-MM-DD'
+  localName: string;
+  name: string;
+  countryCode: string;
+  fixed: boolean;
+  global: boolean;
+  types: string[];
 }
