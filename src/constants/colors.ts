@@ -20,6 +20,10 @@ export const CALENDAR_COLORS = {
   white: '#FFFFFF',
   black: '#000000',
   select_background: 'rgba(246, 165, 146, 0.08)',
-  overlay: 'rgba(0, 0, 0, 0.65)'
+  overlay: 'rgba(0, 0, 0, 0.65)',
+  overlay_2: 'rgba(0, 0, 0, 0.72)',
+  shadow: 'rgba(0, 0, 0, 0.75)',
+  task_btn_background: '#352724',
+  task_btn_border: 'rgba(248, 197, 185, 0.12)'
 } as const;
 

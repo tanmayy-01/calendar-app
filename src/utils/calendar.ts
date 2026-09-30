@@ -96,6 +96,16 @@ export const getDaysInMonthGrid = (
   // Last day of previous month
   const prevMonthLastDay = new Date(year, month, 0).getDate();
 
+  const getSortedEventsForDate = (dateStr: string): CalendarEvent[] => {
+    const list = eventsMap[dateStr] || [];
+    if (list.length <= 1) return list;
+    return [...list].sort((a, b) => {
+      if (a.isTask && !b.isTask) return -1;
+      if (!a.isTask && b.isTask) return 1;
+      return 0;
+    });
+  };
+
   // 1. Previous month leading days
   for (let i = firstDayOfWeek - 1; i >= 0; i--) {
     const dayNum = prevMonthLastDay - i;
@@ -107,7 +117,7 @@ export const getDaysInMonthGrid = (
       dayNumber: dayNum,
       isCurrentMonth: false,
       isToday: isSameDay(date, today),
-      events: eventsMap[dateStr] || [],
+      events: getSortedEventsForDate(dateStr),
     });
   }
 
@@ -122,7 +132,7 @@ export const getDaysInMonthGrid = (
       dayNumber: dayNum,
       isCurrentMonth: true,
       isToday: isSameDay(date, today),
-      events: eventsMap[dateStr] || [],
+      events: getSortedEventsForDate(dateStr),
     });
   }
 
@@ -137,7 +147,7 @@ export const getDaysInMonthGrid = (
       dayNumber: dayNum,
       isCurrentMonth: false,
       isToday: isSameDay(date, today),
-      events: eventsMap[dateStr] || [],
+      events: getSortedEventsForDate(dateStr),
     });
   }
 

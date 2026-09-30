@@ -13,19 +13,20 @@ import { scale } from '@/lib/scale';
 import { AddEventModalProps } from '@/types';
 import { isIOS } from '@/utils';
 
-
-
 export const AddEventModal: React.FC<AddEventModalProps> = ({
   visible,
   selectedDateString,
   onClose,
   onAddEvent,
+  mode = 'event',
 }) => {
   const [title, setTitle] = useState('');
 
+  const isTask = mode === 'task';
+
   const handleSave = () => {
     if (title.trim()) {
-      onAddEvent(title.trim(), selectedDateString);
+      onAddEvent(title.trim(), selectedDateString, mode);
       setTitle('');
       onClose();
     }
@@ -43,12 +44,18 @@ export const AddEventModal: React.FC<AddEventModalProps> = ({
         style={styles.overlay}
       >
         <View style={styles.card}>
-          <Text style={styles.modalTitle}>Add Event</Text>
+          <Text style={styles.modalTitle}>
+            {isTask ? 'Add Task' : 'Add Event'}
+          </Text>
           <Text style={styles.dateSubtitle}>{selectedDateString}</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Event title (e.g. Meeting, Birthday)"
+            placeholder={
+              isTask
+                ? 'Task title (e.g. Call client, Pay bills)'
+                : 'Event title (e.g. Meeting, Birthday party)'
+            }
             placeholderTextColor={CALENDAR_COLORS.textDimmed}
             value={title}
             onChangeText={setTitle}

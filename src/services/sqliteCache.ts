@@ -1,7 +1,8 @@
 import { CalendarEvent } from '@/types';
 
 interface SQLiteDB {
-  execute: (sql: string, params?: any[]) => { rows?: { _array?: any[] } };
+  execute: (sql: string, params?: any[]) => Promise<{ rows?: any[] }> | { rows?: any[] };
+  executeSync?: (sql: string, params?: any[]) => { rows?: any[]; rowsAffected?: number };
 }
 
 let dbInstance: SQLiteDB | null = null;
@@ -21,7 +22,7 @@ function getDatabase(): SQLiteDB | null {
     const { open } = require('@op-engineering/op-sqlite');
     if (typeof open === 'function') {
       const db = open({ name: 'calendar_holidays.db' });
-      db.execute(`
+      const createTableSql = `
         CREATE TABLE IF NOT EXISTS holidays_cache (
           id TEXT PRIMARY KEY,
           year INTEGER,
@@ -31,11 +32,23 @@ function getDatabase(): SQLiteDB | null {
           color TEXT,
           holiday_type TEXT
         );
-      `);
-      db.execute(`
+      `;
+      const createIndexSql = `
         CREATE INDEX IF NOT EXISTS idx_holidays_year_country
         ON holidays_cache(year, country);
-      `);
+      `;
+
+      if (typeof db.executeSync === 'function') {
+        db.executeSync(createTableSql);
+        db.executeSync(createIndexSql);
+      } else if (typeof db.execute === 'function') {
+        Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
+          console.warn('[SQLiteCache] Table init error:', e)
+        );
+        Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
+          console.warn('[SQLiteCache] Index init error:', e)
+        );
+      }
       dbInstance = db;
     }
   } catch (error) {
@@ -57,12 +70,17 @@ export function getHolidaysFromSQLite(
   if (!db) return null;
 
   try {
-    const result = db.execute(
-      'SELECT id, title, date, color, holiday_type FROM holidays_cache WHERE year = ? AND country = ?;',
-      [year, country.toUpperCase()]
-    );
+    const selectSql = 'SELECT id, title, date, color, holiday_type FROM holidays_cache WHERE year = ? AND country = ?;';
+    const params = [year, country.toUpperCase()];
 
-    const rows = result.rows?._array || [];
+    let rows: any[] = [];
+    if (typeof db.executeSync === 'function') {
+      const result = db.executeSync(selectSql, params);
+      rows = Array.isArray(result?.rows)
+        ? result.rows
+        : (result?.rows as any)?._array || [];
+    }
+
     if (!rows || rows.length === 0) {
       return null;
     }
@@ -93,20 +111,27 @@ export function saveHolidaysToSQLite(
   if (!db || !events.length) return;
 
   try {
+    const insertSql = `INSERT OR REPLACE INTO holidays_cache (id, year, country, date, title, color, holiday_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?);`;
+
     for (const evt of events) {
-      db.execute(
-        `INSERT OR REPLACE INTO holidays_cache (id, year, country, date, title, color, holiday_type)
-         VALUES (?, ?, ?, ?, ?, ?, ?);`,
-        [
-          evt.id,
-          year,
-          country.toUpperCase(),
-          evt.date,
-          evt.title,
-          evt.color || '#E06A55',
-          evt.holidayType || 'Festival',
-        ]
-      );
+      const params = [
+        evt.id,
+        year,
+        country.toUpperCase(),
+        evt.date,
+        evt.title,
+        evt.color || '#E06A55',
+        evt.holidayType || 'Festival',
+      ];
+
+      if (typeof db.executeSync === 'function') {
+        db.executeSync(insertSql, params);
+      } else if (typeof db.execute === 'function') {
+        Promise.resolve(db.execute(insertSql, params)).catch((e: any) =>
+          console.warn('[SQLiteCache] Insert error:', e)
+        );
+      }
     }
   } catch (error) {
     console.warn('[SQLiteCache] Error saving holidays:', error);

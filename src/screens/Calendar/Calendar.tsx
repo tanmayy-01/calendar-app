@@ -7,17 +7,28 @@ import {
   NativeScrollEvent,
   Alert,
 } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   CalendarHeader,
   WeekdayHeader,
   MonthView,
   FloatingActionButton,
   AddEventModal,
+  CreateActionModal,
 } from './components';
 
-import { getInitialHolidays, getHolidaysForYears } from '@/services';
+import { CALENDAR_COLORS, SCREEN_NAMES } from '@/constants';
+import {
+  getInitialHolidays,
+  getHolidaysForYears,
+  saveTask,
+  loadTasks,
+  convertTasksToEventsMap,
+  subscribeToTaskChanges,
+} from '@/services';
 import { styles } from './Calendar.styles';
-import { CalendarDay, CalendarEvent } from '@/types';
+import { CalendarDay, CalendarEvent, RootStackParamList } from '@/types';
 import {
   formatDateString,
   formatMonthHeaderTitle,
@@ -27,6 +38,7 @@ import {
 } from '@/utils';
 
 const Calendar: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const flatListRef = useRef<FlatList<number>>(null);
 
@@ -73,7 +85,12 @@ const Calendar: React.FC = () => {
     });
   }, [currentMonthDate]);
 
+  // Action sheet (speed-dial) modal visibility
+  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+
+  // Add event/task dialog visibility and active mode
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'event' | 'task'>('event');
 
   // Array of page indices for virtualized months list
   const pages = useMemo(
@@ -95,20 +112,98 @@ const Calendar: React.FC = () => {
     setSelectedDateString(formatDateString(today));
   }, []);
 
-  const handleAddEvent = useCallback((title: string, dateString: string) => {
-    setEventsMap(prev => {
-      const existing = prev[dateString] || [];
-      const newEvent: CalendarEvent = {
-        id: `${dateString}-${Date.now()}`,
-        title,
-        date: dateString,
-      };
-      return {
-        ...prev,
-        [dateString]: [...existing, newEvent],
-      };
+  // Refresh and sync tasks from storage, automatically deleting expired non-repeating tasks
+  const refreshTasks = useCallback(async () => {
+    const tasks = await loadTasks();
+    const tasksMap = convertTasksToEventsMap(tasks);
+
+    setEventsMap((prev) => {
+      const merged: Record<string, CalendarEvent[]> = {};
+
+      // 1. Keep non-task events (holidays, festivals)
+      for (const [dateStr, list] of Object.entries(prev)) {
+        const nonTasks = list.filter((e) => !e.isTask);
+        if (nonTasks.length > 0) {
+          merged[dateStr] = nonTasks;
+        }
+      }
+
+      // 2. Prepend active tasks so they appear first in day cells
+      for (const [dateStr, taskEvents] of Object.entries(tasksMap)) {
+        const existing = merged[dateStr] || [];
+        merged[dateStr] = [...taskEvents, ...existing];
+      }
+
+      return merged;
     });
   }, []);
+
+  // Reload tasks and trigger auto-deletion of expired non-repeating tasks on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshTasks();
+    }, [refreshTasks])
+  );
+
+  // Initial load of tasks on mount
+  useEffect(() => {
+    refreshTasks();
+  }, [refreshTasks]);
+
+  // Subscribe to live task changes
+  useEffect(() => {
+    const unsubscribe = subscribeToTaskChanges(() => {
+      refreshTasks();
+    });
+    return unsubscribe;
+  }, [refreshTasks]);
+
+  const handleOpenTaskModal = useCallback(() => {
+    setIsActionModalVisible(false);
+    navigation.navigate(SCREEN_NAMES.TASK, {
+      selectedDateString,
+    });
+  }, [navigation, selectedDateString]);
+
+  const handleOpenEventModal = useCallback(() => {
+    setIsActionModalVisible(false);
+    setModalMode('event');
+    setIsAddModalVisible(true);
+  }, []);
+
+  const handleAddEvent = useCallback(
+    (title: string, dateString: string, mode: 'event' | 'task' = 'event') => {
+      const isTask = mode === 'task';
+      if (isTask) {
+        saveTask({
+          id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          title,
+          date: dateString,
+          isAllDay: true,
+          doesNotRepeat: true,
+          repeatOption: 'none',
+          createdAt: Date.now(),
+        });
+      } else {
+        setEventsMap((prev) => {
+          const existing = prev[dateString] || [];
+          const newEvent: CalendarEvent = {
+            id: `${dateString}-${Date.now()}`,
+            title,
+            date: dateString,
+            color: CALENDAR_COLORS.eventPill,
+            isHoliday: false,
+            isTask: false,
+          };
+          return {
+            ...prev,
+            [dateString]: [...existing, newEvent],
+          };
+        });
+      }
+    },
+    [],
+  );
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -183,6 +278,7 @@ const Calendar: React.FC = () => {
           ref={flatListRef}
           data={pages}
           renderItem={renderItem}
+          extraData={eventsMap}
           keyExtractor={keyExtractor}
           horizontal
           pagingEnabled
@@ -199,14 +295,23 @@ const Calendar: React.FC = () => {
       </View>
 
       {/* Floating Action Button */}
-      <FloatingActionButton onPress={() => setIsAddModalVisible(true)} />
+      <FloatingActionButton onPress={() => setIsActionModalVisible(true)} />
 
-      {/* Add Event Modal */}
+      {/* Speed Dial Action Modal (Task & Event Options matching design) */}
+      <CreateActionModal
+        visible={isActionModalVisible}
+        onClose={() => setIsActionModalVisible(false)}
+        onPressTask={handleOpenTaskModal}
+        onPressEvent={handleOpenEventModal}
+      />
+
+      {/* Add Event / Task Input Modal */}
       <AddEventModal
         visible={isAddModalVisible}
         selectedDateString={selectedDateString}
         onClose={() => setIsAddModalVisible(false)}
         onAddEvent={handleAddEvent}
+        mode={modalMode}
       />
     </View>
   );

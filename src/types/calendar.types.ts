@@ -6,6 +6,19 @@ export interface CalendarHeaderProps {
   onPressProfile?: () => void;
 }
 
+export type RepeatOption = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export interface UserTask {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // 'YYYY-MM-DD'
+  isAllDay: boolean;
+  doesNotRepeat: boolean;
+  repeatOption: RepeatOption;
+  createdAt: number;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -13,6 +26,9 @@ export interface CalendarEvent {
   color?: string;
   isHoliday?: boolean;
   holidayType?: 'Public' | 'Festival' | 'Observance' | 'User';
+  isTask?: boolean;
+  doesNotRepeat?: boolean;
+  description?: string;
 }
 
 export interface CalendarDay {
@@ -44,11 +60,19 @@ export interface FloatingActionButtonProps {
   onPress?: () => void;
 }
 
+export interface CreateActionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onPressTask: () => void;
+  onPressEvent: () => void;
+}
+
 export interface AddEventModalProps {
   visible: boolean;
   selectedDateString: string;
   onClose: () => void;
-  onAddEvent: (title: string, dateString: string) => void;
+  onAddEvent: (title: string, dateString: string, mode?: 'event' | 'task') => void;
+  mode?: 'event' | 'task';
 }
 
 export interface NagerHoliday {

@@ -47,10 +47,16 @@ export const DayCell: React.FC<DayCellProps> = React.memo(
               style={[
                 styles.eventPill,
                 event.color ? { backgroundColor: event.color } : null,
+                event.isTask && styles.taskPill,
               ]}
             >
-              <Text style={styles.eventText} numberOfLines={1}>
-                {event.title}
+              <Text
+                style={[styles.eventText, event.isTask && styles.taskText]}
+                numberOfLines={1}
+              >
+                {event.isTask && !event.title.startsWith('✓')
+                  ? `✓ ${event.title}`
+                  : event.title}
               </Text>
             </View>
           ))}
@@ -131,6 +137,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale.w(3),
     paddingVertical: scale.h(1.5),
     alignSelf: 'stretch',
+  },
+  taskPill: {
+    backgroundColor: '#1E3A5F',
+    borderLeftWidth: scale.w(2.5),
+    borderLeftColor: '#4285F4',
+  },
+  taskText: {
+    color: '#FFFFFF',
+    fontWeight: FONT_WEIGHTS.bold,
   },
   eventText: {
     fontSize: scale.ms(9),

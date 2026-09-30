@@ -1,7 +1,8 @@
-
 export type RootStackParamList = {
- Calendar: undefined;
+  Calendar: undefined;
+  Task: {
+    selectedDateString?: string;
+  } | undefined;
 };
-
 
 export type NavigateKey = keyof RootStackParamList;

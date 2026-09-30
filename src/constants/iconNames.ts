@@ -5,4 +5,12 @@ export const ICON_NAMES = {
   TODAY: 'today-outline',
   ADD: 'add',
   PERSON: 'person-circle-outline',
+  CHECKMARK_CIRCLE: 'checkmark-circle-outline',
+  CALENDAR_SOLID: 'calendar',
+  CLOSE: 'close',
+  TIME: 'time-outline',
+  REPEAT: 'sync-outline',
+  DESCRIPTION: 'reorder-three-outline',
+  CHEVRON_DOWN: 'chevron-down',
+  CHECKMARK: 'checkmark',
 } as const;
