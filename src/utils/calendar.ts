@@ -2,9 +2,7 @@ import { MONTH_NAMES } from "@/constants";
 import { CalendarDay, CalendarEvent } from "@/types";
 
 /**
- * Configure swipe direction behavior:
- * If true: Swiping finger left reveals PREVIOUS months, swiping finger right reveals UPCOMING months.
- * If false: Swiping finger left reveals UPCOMING months, swiping finger right reveals PREVIOUS months.
+ * Configure swipe direction behavior
  */
 export const INVERT_SWIPE_DIRECTION = false;
 
@@ -45,7 +43,7 @@ export const isToday = (date: Date): boolean => {
 };
 
 /**
- * Format the month header title (e.g. "September" or "September 2026").
+ * Format the month header title
  */
 export const formatMonthHeaderTitle = (date: Date): string => {
   const monthName = MONTH_NAMES[date.getMonth()];

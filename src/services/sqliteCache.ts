@@ -1,3 +1,4 @@
+import { CALENDAR_COLORS } from '@/constants';
 import { CalendarEvent } from '@/types';
 
 interface SQLiteDB {
@@ -121,7 +122,7 @@ export function saveHolidaysToSQLite(
         country.toUpperCase(),
         evt.date,
         evt.title,
-        evt.color || '#E06A55',
+        evt.color || CALENDAR_COLORS.holidayPill,
         evt.holidayType || 'Festival',
       ];
 

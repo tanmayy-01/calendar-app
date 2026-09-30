@@ -102,7 +102,7 @@ export const styles = StyleSheet.create({
     color: CALENDAR_COLORS.textPrimary,
   },
   accountEmailText: {
-    fontSize: scale.ms(12),
+    fontSize: FONT_SIZES.xs,
     color: CALENDAR_COLORS.textSecondary,
     marginTop: scale.h(2),
   },
@@ -113,7 +113,7 @@ export const styles = StyleSheet.create({
     width: scale.w(8),
     height: scale.w(8),
     borderRadius: scale.w(4),
-    backgroundColor: '#4285F4',
+    backgroundColor: CALENDAR_COLORS.blue_dot_background,
     borderWidth: 1.5,
     borderColor: CALENDAR_COLORS.background,
   },

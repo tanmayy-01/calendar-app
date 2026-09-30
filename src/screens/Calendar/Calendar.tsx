@@ -36,9 +36,10 @@ import {
   INITIAL_MONTH_INDEX,
   TOTAL_MONTHS_COUNT,
 } from '@/utils';
+import * as navigation from '@/utils'
 
 const Calendar: React.FC = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const { width } = useWindowDimensions();
   const flatListRef = useRef<FlatList<number>>(null);
 
@@ -120,7 +121,7 @@ const Calendar: React.FC = () => {
     setEventsMap((prev) => {
       const merged: Record<string, CalendarEvent[]> = {};
 
-      // 1. Keep non-task events (holidays, festivals)
+      // 1. Non-task events (holidays, festivals)
       for (const [dateStr, list] of Object.entries(prev)) {
         const nonTasks = list.filter((e) => !e.isTask);
         if (nonTasks.length > 0) {
@@ -138,14 +139,12 @@ const Calendar: React.FC = () => {
     });
   }, []);
 
-  // Reload tasks and trigger auto-deletion of expired non-repeating tasks on screen focus
   useFocusEffect(
     useCallback(() => {
       refreshTasks();
     }, [refreshTasks])
   );
 
-  // Initial load of tasks on mount
   useEffect(() => {
     refreshTasks();
   }, [refreshTasks]);

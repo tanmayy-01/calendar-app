@@ -24,6 +24,7 @@ export const CALENDAR_COLORS = {
   overlay_2: 'rgba(0, 0, 0, 0.72)',
   shadow: 'rgba(0, 0, 0, 0.75)',
   task_btn_background: '#352724',
-  task_btn_border: 'rgba(248, 197, 185, 0.12)'
+  task_btn_border: 'rgba(248, 197, 185, 0.12)',
+  task_event: '#1E3A5F',
+  blue_dot_background: '#4285F4',
 } as const;
-

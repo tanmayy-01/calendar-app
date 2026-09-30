@@ -139,12 +139,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   taskPill: {
-    backgroundColor: '#1E3A5F',
+    backgroundColor: CALENDAR_COLORS.task_event,
     borderLeftWidth: scale.w(2.5),
-    borderLeftColor: '#4285F4',
+    borderLeftColor: CALENDAR_COLORS.blue_dot_background,
   },
   taskText: {
-    color: '#FFFFFF',
+    color: CALENDAR_COLORS.white,
     fontWeight: FONT_WEIGHTS.bold,
   },
   eventText: {

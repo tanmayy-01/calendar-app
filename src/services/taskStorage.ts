@@ -1,9 +1,16 @@
+import { CALENDAR_COLORS } from '@/constants';
 import { UserTask, CalendarEvent } from '@/types';
 import { formatDateString } from '@/utils';
 
 interface SQLiteDB {
-  execute: (sql: string, params?: any[]) => Promise<{ rows?: any[] }> | { rows?: any[] };
-  executeSync?: (sql: string, params?: any[]) => { rows?: any[]; rowsAffected?: number };
+  execute: (
+    sql: string,
+    params?: any[],
+  ) => Promise<{ rows?: any[] }> | { rows?: any[] };
+  executeSync?: (
+    sql: string,
+    params?: any[],
+  ) => { rows?: any[]; rowsAffected?: number };
 }
 
 let dbInstance: SQLiteDB | null = null;
@@ -17,7 +24,7 @@ type TaskListener = () => void;
 const listeners = new Set<TaskListener>();
 
 function notifyListeners() {
-  listeners.forEach((listener) => {
+  listeners.forEach(listener => {
     try {
       listener();
     } catch (e) {
@@ -61,16 +68,19 @@ function getDatabase(): SQLiteDB | null {
         db.executeSync(createIndexSql);
       } else if (typeof db.execute === 'function') {
         Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
-          console.warn('[TaskStorage] Table init error:', e)
+          console.warn('[TaskStorage] Table init error:', e),
         );
         Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
-          console.warn('[TaskStorage] Index init error:', e)
+          console.warn('[TaskStorage] Index init error:', e),
         );
       }
       dbInstance = db;
     }
   } catch (error) {
-    console.info('[TaskStorage] SQLite not available, using in-memory store:', (error as Error)?.message);
+    console.info(
+      '[TaskStorage] SQLite not available, using in-memory store:',
+      (error as Error)?.message,
+    );
     dbInstance = null;
   }
 
@@ -86,7 +96,7 @@ export function cleanupExpiredTasks(targetDateStr?: string): number {
 
   // 1. Clean in-memory: only delete if doesNotRepeat is true AND date < todayStr
   const beforeCount = memoryTasks.length;
-  memoryTasks = memoryTasks.filter((task) => {
+  memoryTasks = memoryTasks.filter(task => {
     if (task.doesNotRepeat) {
       return task.date >= todayStr;
     }
@@ -98,12 +108,13 @@ export function cleanupExpiredTasks(targetDateStr?: string): number {
   const db = getDatabase();
   if (db) {
     try {
-      const deleteSql = 'DELETE FROM user_tasks WHERE does_not_repeat = 1 AND date < ?;';
+      const deleteSql =
+        'DELETE FROM user_tasks WHERE does_not_repeat = 1 AND date < ?;';
       if (typeof db.executeSync === 'function') {
         db.executeSync(deleteSql, [todayStr]);
       } else if (typeof db.execute === 'function') {
         Promise.resolve(db.execute(deleteSql, [todayStr])).catch((e: any) =>
-          console.warn('[TaskStorage] Error during SQLite auto-cleanup:', e)
+          console.warn('[TaskStorage] Error during SQLite auto-cleanup:', e),
         );
       }
     } catch (e) {
@@ -119,7 +130,7 @@ export function cleanupExpiredTasks(targetDateStr?: string): number {
  */
 export async function saveTask(task: UserTask): Promise<void> {
   // 1. Immediately store in memory so calendar updates synchronously without delay
-  const index = memoryTasks.findIndex((t) => t.id === task.id);
+  const index = memoryTasks.findIndex(t => t.id === task.id);
   if (index >= 0) {
     memoryTasks[index] = task;
   } else {
@@ -209,7 +220,7 @@ export async function loadTasks(): Promise<UserTask[]> {
       });
 
     // Merge SQLite loaded tasks with any in-memory tasks to ensure no unsaved or in-flight tasks are dropped
-    const loadedMap = new Map(loaded.map((t) => [t.id, t]));
+    const loadedMap = new Map(loaded.map(t => [t.id, t]));
     for (const memTask of memoryTasks) {
       if (!loadedMap.has(memTask.id)) {
         if (!memTask.doesNotRepeat || memTask.date >= todayStr) {
@@ -231,7 +242,7 @@ export async function loadTasks(): Promise<UserTask[]> {
  * Deletes a task by ID.
  */
 export async function deleteTask(id: string): Promise<void> {
-  memoryTasks = memoryTasks.filter((t) => t.id !== id);
+  memoryTasks = memoryTasks.filter(t => t.id !== id);
 
   const db = getDatabase();
   if (db) {
@@ -253,7 +264,9 @@ export async function deleteTask(id: string): Promise<void> {
 /**
  * Converts user tasks into CalendarEvent map format keyed by 'YYYY-MM-DD'.
  */
-export function convertTasksToEventsMap(tasks: UserTask[]): Record<string, CalendarEvent[]> {
+export function convertTasksToEventsMap(
+  tasks: UserTask[],
+): Record<string, CalendarEvent[]> {
   const map: Record<string, CalendarEvent[]> = {};
 
   for (const task of tasks) {
@@ -265,7 +278,7 @@ export function convertTasksToEventsMap(tasks: UserTask[]): Record<string, Calen
       id: task.id,
       title: task.title,
       date: task.date,
-      color: '#1E3A5F', // Deep task blue matching Google Tasks
+      color: CALENDAR_COLORS.task_event,
       isHoliday: false,
       isTask: true,
       doesNotRepeat: task.doesNotRepeat,

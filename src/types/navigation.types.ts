@@ -1,3 +1,5 @@
+import { RouteProp } from "@react-navigation/native";
+
 export type RootStackParamList = {
   Calendar: undefined;
   Task: {
@@ -6,3 +8,4 @@ export type RootStackParamList = {
 };
 
 export type NavigateKey = keyof RootStackParamList;
+export type TaskScreenRouteProp = RouteProp<RootStackParamList, 'Task'>;

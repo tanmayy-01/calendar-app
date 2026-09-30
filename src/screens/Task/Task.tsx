@@ -6,55 +6,27 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  SafeAreaView,
   Modal,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRoute } from '@react-navigation/native';
 import { Calendar, DateData } from 'react-native-calendars';
 import {
   CALENDAR_COLORS,
+  FONT_SIZES,
+  FONT_WEIGHTS,
   ICON_NAMES,
+  REPEAT_CHOICES,
 } from '@/constants';
 import { IconProvider } from '@/lib/icons';
 import { scale } from '@/lib/scale';
-import { RootStackParamList, RepeatOption, UserTask } from '@/types';
-import { formatDateString } from '@/utils';
+import { RepeatOption, UserTask, TaskScreenRouteProp } from '@/types';
+import { formatDateString, formatDisplayDate } from '@/utils';
 import { saveTask } from '@/services/taskStorage';
 import { styles } from './Task.styles';
-
-type TaskScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Task'>;
-type TaskScreenRouteProp = RouteProp<RootStackParamList, 'Task'>;
-
-const REPEAT_CHOICES: { key: RepeatOption; label: string; subtitle?: string }[] = [
-  {
-    key: 'none',
-    label: 'Does not repeat',
-    subtitle: 'Auto-deleted after the event date passes',
-  },
-  { key: 'daily', label: 'Every day' },
-  { key: 'weekly', label: 'Every week' },
-  { key: 'monthly', label: 'Every month' },
-  { key: 'yearly', label: 'Every year' },
-];
-
-/**
- * Formats a Date object to "Fri, Sep 1, 2023" style matching reference.
- */
-function formatDisplayDate(date: Date): string {
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthShort = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  const dName = dayNames[date.getDay()];
-  const mName = monthShort[date.getMonth()];
-  return `${dName}, ${mName} ${date.getDate()}, ${date.getFullYear()}`;
-}
+import * as navigation from '@/utils';
 
 const Task: React.FC = () => {
-  const navigation = useNavigation<TaskScreenNavigationProp>();
   const route = useRoute<TaskScreenRouteProp>();
 
   // Initialize date from route params or fallback to current local time
@@ -75,7 +47,6 @@ const Task: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [repeatOption, setRepeatOption] = useState<RepeatOption>('none');
 
-  // Modals for picking date and repeat options
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isRepeatPickerVisible, setIsRepeatPickerVisible] = useState(false);
 
@@ -105,10 +76,13 @@ const Task: React.FC = () => {
     navigation.goBack();
   }, [title, description, selectedDate, isAllDay, repeatOption, navigation]);
 
-  const selectedDateStr = useMemo(() => formatDateString(selectedDate), [selectedDate]);
+  const selectedDateStr = useMemo(
+    () => formatDateString(selectedDate),
+    [selectedDate],
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.safeArea}>
         {/* Top Header Bar */}
         <View style={styles.header}>
@@ -180,7 +154,9 @@ const Task: React.FC = () => {
 
             <View style={styles.contentColumn}>
               <Text style={styles.accountCategoryText}>Tasks</Text>
-              <Text style={styles.accountEmailText}>tanmayshende007@gmail.com</Text>
+              <Text style={styles.accountEmailText}>
+                tanmayshende007@gmail.com
+              </Text>
             </View>
           </View>
 
@@ -226,11 +202,15 @@ const Task: React.FC = () => {
                 false: CALENDAR_COLORS.surface,
                 true: CALENDAR_COLORS.todayBadge,
               }}
-              thumbColor={isAllDay ? CALENDAR_COLORS.todayText : CALENDAR_COLORS.textDimmed}
+              thumbColor={
+                isAllDay
+                  ? CALENDAR_COLORS.todayText
+                  : CALENDAR_COLORS.textDimmed
+              }
             />
           </View>
 
-          {/* Date Picker Row (Indented) */}
+          {/* Date Picker */}
           <TouchableOpacity
             style={styles.dateIndentedRow}
             onPress={() => setIsDatePickerVisible(true)}
@@ -257,7 +237,8 @@ const Task: React.FC = () => {
 
             <View style={styles.repeatRowContent}>
               <Text style={styles.repeatText}>
-                {REPEAT_CHOICES.find((c) => c.key === repeatOption)?.label || 'Does not repeat'}
+                {REPEAT_CHOICES.find(c => c.key === repeatOption)?.label ||
+                  'Does not repeat'}
               </Text>
               {repeatOption === 'none' && (
                 <Text style={styles.autoDeleteHint}>
@@ -284,7 +265,7 @@ const Task: React.FC = () => {
           <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalHeaderTitle}>Repeat options</Text>
 
-            {REPEAT_CHOICES.map((choice) => {
+            {REPEAT_CHOICES.map(choice => {
               const isSelected = choice.key === repeatOption;
               return (
                 <TouchableOpacity
@@ -326,7 +307,7 @@ const Task: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Date Picker Modal using react-native-calendars */}
+      {/* Date Picker Modal */}
       <Modal
         visible={isDatePickerVisible}
         transparent
@@ -338,7 +319,10 @@ const Task: React.FC = () => {
           activeOpacity={1}
           onPress={() => setIsDatePickerVisible(false)}
         >
-          <View style={styles.calendarModalCard} onStartShouldSetResponder={() => true}>
+          <View
+            style={styles.calendarModalCard}
+            onStartShouldSetResponder={() => true}
+          >
             <Calendar
               current={selectedDateStr}
               onDayPress={(day: DateData) => {
@@ -365,18 +349,18 @@ const Task: React.FC = () => {
                 textDisabledColor: CALENDAR_COLORS.textDimmed,
                 monthTextColor: CALENDAR_COLORS.textPrimary,
                 arrowColor: CALENDAR_COLORS.todayBadge,
-                textDayFontWeight: '500',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '600',
+                textDayFontWeight: FONT_WEIGHTS.medium,
+                textMonthFontWeight: FONT_WEIGHTS.bold,
+                textDayHeaderFontWeight: FONT_WEIGHTS.semibold,
                 textDayFontSize: scale.ms(13),
                 textMonthFontSize: scale.ms(15),
-                textDayHeaderFontSize: scale.ms(12),
+                textDayHeaderFontSize: FONT_SIZES.xs,
               }}
             />
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
