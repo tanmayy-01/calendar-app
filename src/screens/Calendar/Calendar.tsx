@@ -7,8 +7,7 @@ import {
   NativeScrollEvent,
   Alert,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   CalendarHeader,
   WeekdayHeader,
@@ -28,15 +27,15 @@ import {
   subscribeToTaskChanges,
 } from '@/services';
 import { styles } from './Calendar.styles';
-import { CalendarDay, CalendarEvent, RootStackParamList } from '@/types';
+import { CalendarDay, CalendarEvent } from '@/types';
 import {
   formatDateString,
   formatMonthHeaderTitle,
   getDateForPageIndex,
   INITIAL_MONTH_INDEX,
   TOTAL_MONTHS_COUNT,
+  navigate,
 } from '@/utils';
-import * as navigation from '@/utils'
 
 const Calendar: React.FC = () => {
 
@@ -159,10 +158,10 @@ const Calendar: React.FC = () => {
 
   const handleOpenTaskModal = useCallback(() => {
     setIsActionModalVisible(false);
-    navigation.navigate(SCREEN_NAMES.TASK, {
+    navigate(SCREEN_NAMES.TASK, {
       selectedDateString,
     });
-  }, [navigation, selectedDateString]);
+  }, [selectedDateString]);
 
   const handleOpenEventModal = useCallback(() => {
     setIsActionModalVisible(false);

@@ -29,17 +29,26 @@ import * as navigation from '@/utils';
 const Task: React.FC = () => {
   const route = useRoute<TaskScreenRouteProp>();
 
-  // Initialize date from route params or fallback to current local time
+  // Today's date string (YYYY-MM-DD)
+  const today = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => formatDateString(today), [today]);
+
+  // Initialize date from route params or fallback to today.
+  // Ensure that if route.params?.selectedDateString is in the past, fallback to today.
   const initialDate = useMemo(() => {
     const param = route.params?.selectedDateString;
     if (param) {
       const parts = param.split('-').map(Number);
       if (parts.length === 3) {
-        return new Date(parts[0], parts[1] - 1, parts[2]);
+        const parsed = new Date(parts[0], parts[1] - 1, parts[2]);
+        const parsedStr = formatDateString(parsed);
+        if (parsedStr >= todayStr) {
+          return parsed;
+        }
       }
     }
     return new Date();
-  }, [route.params?.selectedDateString]);
+  }, [route.params?.selectedDateString, todayStr]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -59,6 +68,11 @@ const Task: React.FC = () => {
     }
 
     const dateStr = formatDateString(selectedDate);
+    if (dateStr < todayStr) {
+      Alert.alert('Invalid Date', 'Tasks can only be scheduled for today or future dates.');
+      return;
+    }
+
     const doesNotRepeat = repeatOption === 'none';
 
     const newTask: UserTask = {
@@ -74,7 +88,7 @@ const Task: React.FC = () => {
 
     await saveTask(newTask);
     navigation.goBack();
-  }, [title, description, selectedDate, isAllDay, repeatOption, navigation]);
+  }, [title, description, selectedDate, todayStr, isAllDay, repeatOption]);
 
   const selectedDateStr = useMemo(
     () => formatDateString(selectedDate),
@@ -325,7 +339,10 @@ const Task: React.FC = () => {
           >
             <Calendar
               current={selectedDateStr}
+              minDate={todayStr}
+              disableAllTouchEventsForDisabledDays={true}
               onDayPress={(day: DateData) => {
+                if (day.dateString < todayStr) return;
                 const parts = day.dateString.split('-').map(Number);
                 setSelectedDate(new Date(parts[0], parts[1] - 1, parts[2]));
                 setIsDatePickerVisible(false);
