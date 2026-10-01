@@ -26,6 +26,49 @@ import { saveTask } from '@/services/taskStorage';
 import { styles } from './Task.styles';
 import * as navigation from '@/utils';
 
+function parseTimeString(timeStr: string): { hour: number; minute: number; period: 'AM' | 'PM' } {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    return {
+      hour: Math.max(1, Math.min(12, parseInt(match[1], 10))),
+      minute: Math.max(0, Math.min(59, parseInt(match[2], 10))),
+      period: match[3].toUpperCase() as 'AM' | 'PM',
+    };
+  }
+  return { hour: 10, minute: 0, period: 'AM' };
+}
+
+function formatTimeString(
+  hour: number | string,
+  minute: number | string,
+  period: 'AM' | 'PM',
+): string {
+  const h = Math.max(1, Math.min(12, Number(hour) || 12));
+  const m = Math.max(0, Math.min(59, Number(minute) || 0));
+  return `${h}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function getInitialTime(): string {
+  const now = new Date();
+  const nextHour = now.getHours() + 1;
+  const period: 'AM' | 'PM' = nextHour >= 12 && nextHour < 24 ? 'PM' : 'AM';
+  const hour12 = nextHour % 12 === 0 ? 12 : nextHour % 12;
+  return `${hour12}:00 ${period}`;
+}
+
+const QUICK_TIME_PRESETS = [
+  '09:00 AM',
+  '10:00 AM',
+  '12:00 PM',
+  '02:00 PM',
+  '04:00 PM',
+  '06:00 PM',
+  '08:00 PM',
+];
+
+const QUICK_MINUTES = [0, 15, 30, 45];
+const HOURS_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
 const Task: React.FC = () => {
   const route = useRoute<TaskScreenRouteProp>();
 
@@ -33,8 +76,6 @@ const Task: React.FC = () => {
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => formatDateString(today), [today]);
 
-  // Initialize date from route params or fallback to today.
-  // Ensure that if route.params?.selectedDateString is in the past, fallback to today.
   const initialDate = useMemo(() => {
     const param = route.params?.selectedDateString;
     if (param) {
@@ -56,6 +97,35 @@ const Task: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [repeatOption, setRepeatOption] = useState<RepeatOption>('none');
 
+  // Time state for when isAllDay is false
+  const [selectedTime, setSelectedTime] = useState<string>(getInitialTime);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+
+  // Time picker modal temporary states
+  const [tempHour, setTempHour] = useState<number>(
+    () => parseTimeString(selectedTime).hour,
+  );
+  const [tempMinute, setTempMinute] = useState<number>(
+    () => parseTimeString(selectedTime).minute,
+  );
+  const [tempPeriod, setTempPeriod] = useState<'AM' | 'PM'>(
+    () => parseTimeString(selectedTime).period,
+  );
+
+  const openTimePicker = useCallback(() => {
+    const parsed = parseTimeString(selectedTime);
+    setTempHour(parsed.hour);
+    setTempMinute(parsed.minute);
+    setTempPeriod(parsed.period);
+    setIsTimePickerVisible(true);
+  }, [selectedTime]);
+
+  const confirmTime = useCallback(() => {
+    const formatted = formatTimeString(tempHour, tempMinute, tempPeriod);
+    setSelectedTime(formatted);
+    setIsTimePickerVisible(false);
+  }, [tempHour, tempMinute, tempPeriod]);
+
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isRepeatPickerVisible, setIsRepeatPickerVisible] = useState(false);
 
@@ -69,7 +139,10 @@ const Task: React.FC = () => {
 
     const dateStr = formatDateString(selectedDate);
     if (dateStr < todayStr) {
-      Alert.alert('Invalid Date', 'Tasks can only be scheduled for today or future dates.');
+      Alert.alert(
+        'Invalid Date',
+        'Tasks can only be scheduled for today or future dates.',
+      );
       return;
     }
 
@@ -80,6 +153,7 @@ const Task: React.FC = () => {
       title: title.trim(),
       description: description.trim(),
       date: dateStr,
+      time: isAllDay ? undefined : selectedTime,
       isAllDay,
       doesNotRepeat,
       repeatOption,
@@ -88,7 +162,7 @@ const Task: React.FC = () => {
 
     await saveTask(newTask);
     navigation.goBack();
-  }, [title, description, selectedDate, todayStr, isAllDay, repeatOption]);
+  }, [title, description, selectedDate, todayStr, isAllDay, selectedTime, repeatOption]);
 
   const selectedDateStr = useMemo(
     () => formatDateString(selectedDate),
@@ -112,10 +186,6 @@ const Task: React.FC = () => {
               color={CALENDAR_COLORS.textPrimary}
             />
           </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <View style={styles.chevronHandle} />
-          </View>
 
           <TouchableOpacity
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
@@ -211,7 +281,12 @@ const Task: React.FC = () => {
 
             <Switch
               value={isAllDay}
-              onValueChange={setIsAllDay}
+              onValueChange={val => {
+                setIsAllDay(val);
+                if (!val) {
+                  openTimePicker();
+                }
+              }}
               trackColor={{
                 false: CALENDAR_COLORS.surface,
                 true: CALENDAR_COLORS.todayBadge,
@@ -224,16 +299,43 @@ const Task: React.FC = () => {
             />
           </View>
 
-          {/* Date Picker */}
-          <TouchableOpacity
-            style={styles.dateIndentedRow}
-            onPress={() => setIsDatePickerVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dateDisplayText}>
-              {formatDisplayDate(selectedDate)}
-            </Text>
-          </TouchableOpacity>
+          {/* Date & Time Row */}
+          {isAllDay ? (
+            <TouchableOpacity
+              style={styles.dateIndentedRow}
+              onPress={() => setIsDatePickerVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.dateDisplayText}>
+                {formatDisplayDate(selectedDate)}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity
+                style={styles.dateChip}
+                onPress={() => setIsDatePickerVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateDisplayText}>
+                  {formatDisplayDate(selectedDate)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.timeChip}
+                onPress={openTimePicker}
+                activeOpacity={0.7}
+              >
+                <IconProvider
+                  name={ICON_NAMES.TIME}
+                  size={scale.ms(16)}
+                  color={CALENDAR_COLORS.todayBadge}
+                />
+                <Text style={styles.timeChipText}>{selectedTime}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Repeat Option Row */}
           <TouchableOpacity
@@ -374,6 +476,218 @@ const Task: React.FC = () => {
                 textDayHeaderFontSize: FONT_SIZES.xs,
               }}
             />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={isTimePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsTimePickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsTimePickerVisible(false)}
+        >
+          <View
+            style={styles.timeModalCard}
+            onStartShouldSetResponder={() => true}
+          >
+            <Text style={styles.modalHeaderTitle}>Select time</Text>
+
+            {/* Interactive Digital Clock Display */}
+            <View style={styles.timeDisplayRow}>
+              {/* Hour Input Box */}
+              <View style={[styles.timeInputBox, styles.timeInputBoxActive]}>
+                <TextInput
+                  style={styles.timeInputText}
+                  value={String(tempHour)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  onChangeText={val => {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num)) {
+                      setTempHour(Math.max(1, Math.min(12, num)));
+                    } else if (val === '') {
+                      setTempHour(1);
+                    }
+                  }}
+                  selectTextOnFocus
+                />
+              </View>
+
+              <Text style={styles.timeColon}>:</Text>
+
+              {/* Minute Input Box */}
+              <View style={styles.timeInputBox}>
+                <TextInput
+                  style={styles.timeInputText}
+                  value={String(tempMinute).padStart(2, '0')}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  onChangeText={val => {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num)) {
+                      setTempMinute(Math.max(0, Math.min(59, num)));
+                    } else if (val === '') {
+                      setTempMinute(0);
+                    }
+                  }}
+                  selectTextOnFocus
+                />
+              </View>
+
+              {/* AM / PM Segment Toggle */}
+              <View style={styles.amPmCol}>
+                <TouchableOpacity
+                  style={[
+                    styles.amPmBtn,
+                    tempPeriod === 'AM' && styles.amPmBtnActive,
+                  ]}
+                  onPress={() => setTempPeriod('AM')}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.amPmBtnText,
+                      tempPeriod === 'AM' && styles.amPmBtnTextActive,
+                    ]}
+                  >
+                    AM
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.amPmBtn,
+                    tempPeriod === 'PM' && styles.amPmBtnActive,
+                  ]}
+                  onPress={() => setTempPeriod('PM')}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.amPmBtnText,
+                      tempPeriod === 'PM' && styles.amPmBtnTextActive,
+                    ]}
+                  >
+                    PM
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Quick Popular Presets */}
+            <Text style={styles.timeSectionSubtitle}>Popular times</Text>
+            <View style={styles.quickChipsRow}>
+              {QUICK_TIME_PRESETS.map(preset => {
+                const parsed = parseTimeString(preset);
+                const isActive =
+                  tempHour === parsed.hour &&
+                  tempMinute === parsed.minute &&
+                  tempPeriod === parsed.period;
+
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[
+                      styles.quickChip,
+                      isActive && styles.quickChipActive,
+                    ]}
+                    onPress={() => {
+                      setTempHour(parsed.hour);
+                      setTempMinute(parsed.minute);
+                      setTempPeriod(parsed.period);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.quickChipText,
+                        isActive && styles.quickChipTextActive,
+                      ]}
+                    >
+                      {preset}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Quick Hour Grid */}
+            <Text style={styles.timeSectionSubtitle}>Hour</Text>
+            <View style={styles.hoursGrid}>
+              {HOURS_LIST.map(h => {
+                const isActive = tempHour === h;
+                return (
+                  <TouchableOpacity
+                    key={`h-${h}`}
+                    style={[styles.hourBtn, isActive && styles.hourBtnActive]}
+                    onPress={() => setTempHour(h)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.hourBtnText,
+                        isActive && styles.hourBtnTextActive,
+                      ]}
+                    >
+                      {h}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Quick Minute Chips */}
+            <Text style={styles.timeSectionSubtitle}>Minute</Text>
+            <View style={styles.quickChipsRow}>
+              {QUICK_MINUTES.map(m => {
+                const isActive = tempMinute === m;
+                return (
+                  <TouchableOpacity
+                    key={`m-${m}`}
+                    style={[
+                      styles.quickChip,
+                      isActive && styles.quickChipActive,
+                    ]}
+                    onPress={() => setTempMinute(m)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.quickChipText,
+                        isActive && styles.quickChipTextActive,
+                      ]}
+                    >
+                      :{String(m).padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalActionCancelBtn}
+                onPress={() => setIsTimePickerVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalActionCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalActionConfirmBtn}
+                onPress={confirmTime}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalActionConfirmText}>Set time</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>

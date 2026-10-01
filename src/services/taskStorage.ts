@@ -52,6 +52,7 @@ function getDatabase(): SQLiteDB | null {
           title TEXT NOT NULL,
           description TEXT,
           date TEXT NOT NULL,
+          time TEXT,
           is_all_day INTEGER DEFAULT 1,
           does_not_repeat INTEGER DEFAULT 1,
           repeat_option TEXT DEFAULT 'none',
@@ -66,12 +67,20 @@ function getDatabase(): SQLiteDB | null {
       if (typeof db.executeSync === 'function') {
         db.executeSync(createTableSql);
         db.executeSync(createIndexSql);
+        try {
+          db.executeSync('ALTER TABLE user_tasks ADD COLUMN time TEXT;');
+        } catch {
+          // Column already exists
+        }
       } else if (typeof db.execute === 'function') {
         Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
           console.warn('[TaskStorage] Table init error:', e),
         );
         Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
           console.warn('[TaskStorage] Index init error:', e),
+        );
+        Promise.resolve(db.execute('ALTER TABLE user_tasks ADD COLUMN time TEXT;')).catch(
+          () => {},
         );
       }
       dbInstance = db;
@@ -142,13 +151,14 @@ export async function saveTask(task: UserTask): Promise<void> {
   if (db) {
     try {
       const sql = `INSERT OR REPLACE INTO user_tasks 
-         (id, title, description, date, is_all_day, does_not_repeat, repeat_option, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
+         (id, title, description, date, time, is_all_day, does_not_repeat, repeat_option, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`;
       const params = [
         task.id,
         task.title,
         task.description || '',
         task.date,
+        task.time || null,
         task.isAllDay ? 1 : 0,
         task.doesNotRepeat ? 1 : 0,
         task.repeatOption || 'none',
@@ -183,7 +193,7 @@ export async function loadTasks(): Promise<UserTask[]> {
   }
 
   try {
-    const selectSql = `SELECT id, title, description, date, is_all_day, does_not_repeat, repeat_option, created_at 
+    const selectSql = `SELECT id, title, description, date, time, is_all_day, does_not_repeat, repeat_option, created_at 
        FROM user_tasks 
        ORDER BY date ASC;`;
 
@@ -206,6 +216,7 @@ export async function loadTasks(): Promise<UserTask[]> {
         title: String(r.title),
         description: r.description ? String(r.description) : '',
         date: String(r.date),
+        time: r.time ? String(r.time) : undefined,
         isAllDay: r.is_all_day === 1 || r.is_all_day === true,
         doesNotRepeat: r.does_not_repeat === 1 || r.does_not_repeat === true,
         repeatOption: r.repeat_option || 'none',
@@ -274,10 +285,14 @@ export function convertTasksToEventsMap(
       map[task.date] = [];
     }
 
+    const displayTitle =
+      task.time && !task.isAllDay ? `${task.time} ${task.title}` : task.title;
+
     map[task.date].push({
       id: task.id,
-      title: task.title,
+      title: displayTitle,
       date: task.date,
+      time: task.time,
       color: CALENDAR_COLORS.task_event,
       isHoliday: false,
       isTask: true,

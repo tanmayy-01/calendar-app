@@ -13,6 +13,7 @@ export interface UserTask {
   title: string;
   description?: string;
   date: string; // 'YYYY-MM-DD'
+  time?: string; // e.g. '10:00 AM'
   isAllDay: boolean;
   doesNotRepeat: boolean;
   repeatOption: RepeatOption;
@@ -23,6 +24,7 @@ export interface CalendarEvent {
   id: string;
   title: string;
   date: string; // 'YYYY-MM-DD'
+  time?: string; // e.g. '10:00 AM'
   color?: string;
   isHoliday?: boolean;
   holidayType?: 'Public' | 'Festival' | 'Observance' | 'User';
