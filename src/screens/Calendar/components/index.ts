@@ -5,3 +5,4 @@ export * from './DayCell';
 export * from './FloatingActionButton';
 export * from './AddEventModal';
 export * from './CreateActionModal';
+export * from './DayScheduleModal';

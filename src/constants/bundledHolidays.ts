@@ -634,9 +634,9 @@ export const BUNDLED_HOLIDAYS_IN: Record<string, CalendarEvent[]> = {
   "2025-10-02": [
     {
       "id": "fest-2025-10-02-GandhiJayanti",
-      "title": "Gandhi Jayanti",
+      "title": "Mahatma Gandhi Jayanti",
       "date": "2025-10-02",
-      "color": "#E06A55",
+      "color": "#3EA898",
       "isHoliday": true,
       "holidayType": "Public"
     }
@@ -1324,9 +1324,9 @@ export const BUNDLED_HOLIDAYS_IN: Record<string, CalendarEvent[]> = {
   "2026-10-02": [
     {
       "id": "fest-2026-10-02-GandhiJayanti",
-      "title": "Gandhi Jayanti",
+      "title": "Mahatma Gandhi Jayanti",
       "date": "2026-10-02",
-      "color": "#E06A55",
+      "color": "#3EA898",
       "isHoliday": true,
       "holidayType": "Public"
     }
@@ -2104,9 +2104,9 @@ export const BUNDLED_HOLIDAYS_IN: Record<string, CalendarEvent[]> = {
   "2027-10-02": [
     {
       "id": "fest-2027-10-02-GandhiJayanti",
-      "title": "Gandhi Jayanti",
+      "title": "Mahatma Gandhi Jayanti",
       "date": "2027-10-02",
-      "color": "#E06A55",
+      "color": "#3EA898",
       "isHoliday": true,
       "holidayType": "Public"
     }

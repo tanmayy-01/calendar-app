@@ -15,6 +15,7 @@ import {
   FloatingActionButton,
   AddEventModal,
   CreateActionModal,
+  DayScheduleModal,
 } from './components';
 
 import { CALENDAR_COLORS, SCREEN_NAMES } from '@/constants';
@@ -88,6 +89,9 @@ const Calendar: React.FC = () => {
   // Action sheet (speed-dial) modal visibility
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
 
+  // Day Schedule timeline modal visibility (opened on clicking any day cell)
+  const [isDayScheduleModalVisible, setIsDayScheduleModalVisible] = useState(false);
+
   // Add event/task dialog visibility and active mode
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'event' | 'task'>('event');
@@ -100,6 +104,7 @@ const Calendar: React.FC = () => {
 
   const handleSelectDay = useCallback((day: CalendarDay) => {
     setSelectedDateString(day.dateString);
+    setIsDayScheduleModalVisible(true);
   }, []);
 
   const handleJumpToToday = useCallback(() => {
@@ -156,15 +161,27 @@ const Calendar: React.FC = () => {
     return unsubscribe;
   }, [refreshTasks]);
 
-  const handleOpenTaskModal = useCallback(() => {
-    setIsActionModalVisible(false);
-    navigate(SCREEN_NAMES.TASK, {
-      selectedDateString,
-    });
-  }, [selectedDateString]);
+  const handleOpenTaskModal = useCallback(
+    (hour?: number) => {
+      setIsActionModalVisible(false);
+      setIsDayScheduleModalVisible(false);
+      let prefilledTime: string | undefined;
+      if (typeof hour === 'number') {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const h12 = hour % 12 === 0 ? 12 : hour % 12;
+        prefilledTime = `${h12.toString().padStart(2, '0')}:00 ${period}`;
+      }
+      navigate(SCREEN_NAMES.TASK, {
+        selectedDateString,
+        prefilledTime,
+      });
+    },
+    [selectedDateString],
+  );
 
   const handleOpenEventModal = useCallback(() => {
     setIsActionModalVisible(false);
+    setIsDayScheduleModalVisible(false);
     setModalMode('event');
     setIsAddModalVisible(true);
   }, []);
@@ -310,6 +327,16 @@ const Calendar: React.FC = () => {
         onClose={() => setIsAddModalVisible(false)}
         onAddEvent={handleAddEvent}
         mode={modalMode}
+      />
+
+      {/* Day Schedule Timeline Modal (Opens when day cell is clicked) */}
+      <DayScheduleModal
+        visible={isDayScheduleModalVisible}
+        dateString={selectedDateString}
+        events={eventsMap[selectedDateString] || []}
+        onClose={() => setIsDayScheduleModalVisible(false)}
+        onPressTask={(hour) => handleOpenTaskModal(hour)}
+        onPressEvent={handleOpenEventModal}
       />
     </View>
   );

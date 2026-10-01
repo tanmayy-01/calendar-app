@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Calendar: undefined;
   Task: {
     selectedDateString?: string;
+    prefilledTime?: string;
   } | undefined;
 };
 

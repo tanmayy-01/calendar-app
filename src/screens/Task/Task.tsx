@@ -93,12 +93,16 @@ const Task: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isAllDay, setIsAllDay] = useState(true);
+  const [isAllDay, setIsAllDay] = useState(
+    () => !route.params?.prefilledTime,
+  );
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [repeatOption, setRepeatOption] = useState<RepeatOption>('none');
 
   // Time state for when isAllDay is false
-  const [selectedTime, setSelectedTime] = useState<string>(getInitialTime);
+  const [selectedTime, setSelectedTime] = useState<string>(
+    () => route.params?.prefilledTime || getInitialTime(),
+  );
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
 
   // Time picker modal temporary states

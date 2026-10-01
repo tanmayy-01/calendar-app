@@ -1,3 +1,4 @@
+import { scale } from '@/lib/scale';
 import { RepeatOption } from '@/types';
 
 export const DAYS_OF_WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
@@ -55,3 +56,6 @@ export const monthShort = [
   'Nov',
   'Dec',
 ];
+
+export const HOURS = Array.from({ length: 24 }, (_, i) => i);
+export const HOUR_SLOT_HEIGHT = scale.h(64);

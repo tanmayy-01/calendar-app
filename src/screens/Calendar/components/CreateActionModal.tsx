@@ -20,7 +20,7 @@ import { scale } from '@/lib/scale';
 import { CreateActionModalProps } from '@/types';
 
 export const CreateActionModal: React.FC<CreateActionModalProps> = React.memo(
-  ({ visible, onClose, onPressTask, onPressEvent }) => {
+  ({ visible, onClose, onPressTask, onPressEvent, useModal = true }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const taskSlideAnim = useRef(new Animated.Value(20)).current;
     const taskScaleAnim = useRef(new Animated.Value(0.85)).current;
@@ -103,6 +103,99 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = React.memo(
 
     if (!visible) return null;
 
+    const modalContent = (
+      <TouchableWithoutFeedback onPress={() => handleDismiss()}>
+        <Animated.View
+          style={[
+            styles.backdrop,
+            !useModal && styles.inlineBackdrop,
+            {
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          {/* Speed dial action buttons on the bottom-right */}
+          <View style={styles.actionsContainer} pointerEvents="box-none">
+            {/* Task Row */}
+            <Animated.View
+              style={[
+                styles.actionRow,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    { translateY: taskSlideAnim },
+                    { scale: taskScaleAnim },
+                  ],
+                },
+              ]}
+            >
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleTaskPress}
+                style={styles.labelTouchable}
+              >
+                <Text style={styles.labelText}>Task</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleTaskPress}
+                style={[styles.actionButton, styles.taskButton]}
+                accessibilityLabel="Create a new task"
+                accessibilityRole="button"
+              >
+                <IconProvider
+                  name={ICON_NAMES.CHECKMARK_CIRCLE}
+                  size={scale.ms(26)}
+                  color={CALENDAR_COLORS.fabIcon}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Event Row */}
+            <Animated.View
+              style={[
+                styles.actionRow,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    { translateY: eventSlideAnim },
+                    { scale: eventScaleAnim },
+                  ],
+                },
+              ]}
+            >
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleEventPress}
+                style={styles.labelTouchable}
+              >
+                <Text style={styles.labelText}>Event</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleEventPress}
+                style={[styles.actionButton, styles.eventButton]}
+                accessibilityLabel="Create a new event"
+                accessibilityRole="button"
+              >
+                <IconProvider
+                  name={ICON_NAMES.CALENDAR_SOLID}
+                  size={scale.ms(24)}
+                  color={CALENDAR_COLORS.todayText}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    );
+
+    if (!useModal) {
+      return modalContent;
+    }
+
     return (
       <Modal
         visible={visible}
@@ -110,91 +203,7 @@ export const CreateActionModal: React.FC<CreateActionModalProps> = React.memo(
         animationType="none"
         onRequestClose={() => handleDismiss()}
       >
-        <TouchableWithoutFeedback onPress={() => handleDismiss()}>
-          <Animated.View
-            style={[
-              styles.backdrop,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            {/* Speed dial action buttons on the bottom-right */}
-            <View style={styles.actionsContainer} pointerEvents="box-none">
-              {/* Task Row */}
-              <Animated.View
-                style={[
-                  styles.actionRow,
-                  {
-                    opacity: fadeAnim,
-                    transform: [
-                      { translateY: taskSlideAnim },
-                      { scale: taskScaleAnim },
-                    ],
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleTaskPress}
-                  style={styles.labelTouchable}
-                >
-                  <Text style={styles.labelText}>Task</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleTaskPress}
-                  style={[styles.actionButton, styles.taskButton]}
-                  accessibilityLabel="Create a new task"
-                  accessibilityRole="button"
-                >
-                  <IconProvider
-                    name={ICON_NAMES.CHECKMARK_CIRCLE}
-                    size={scale.ms(26)}
-                    color={CALENDAR_COLORS.fabIcon}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-
-              {/* Event Row */}
-              <Animated.View
-                style={[
-                  styles.actionRow,
-                  {
-                    opacity: fadeAnim,
-                    transform: [
-                      { translateY: eventSlideAnim },
-                      { scale: eventScaleAnim },
-                    ],
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleEventPress}
-                  style={styles.labelTouchable}
-                >
-                  <Text style={styles.labelText}>Event</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleEventPress}
-                  style={[styles.actionButton, styles.eventButton]}
-                  accessibilityLabel="Create a new event"
-                  accessibilityRole="button"
-                >
-                  <IconProvider
-                    name={ICON_NAMES.CALENDAR_SOLID}
-                    size={scale.ms(24)}
-                    color={CALENDAR_COLORS.todayText}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-          </Animated.View>
-        </TouchableWithoutFeedback>
+        {modalContent}
       </Modal>
     );
   },
@@ -207,6 +216,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: CALENDAR_COLORS.overlay_2,
     justifyContent: 'flex-end',
+  },
+  inlineBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
   },
   actionsContainer: {
     position: 'absolute',

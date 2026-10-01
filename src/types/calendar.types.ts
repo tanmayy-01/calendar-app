@@ -67,6 +67,7 @@ export interface CreateActionModalProps {
   onClose: () => void;
   onPressTask: () => void;
   onPressEvent: () => void;
+  useModal?: boolean;
 }
 
 export interface AddEventModalProps {
@@ -85,4 +86,14 @@ export interface NagerHoliday {
   fixed: boolean;
   global: boolean;
   types: string[];
+}
+
+export interface DayScheduleModalProps {
+  visible: boolean;
+  dateString: string; // 'YYYY-MM-DD'
+  events: CalendarEvent[];
+  onClose: () => void;
+  onPressTask?: (hour?: number) => void;
+  onPressEvent?: () => void;
+  onPressFab?: () => void;
 }
