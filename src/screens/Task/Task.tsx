@@ -298,9 +298,7 @@ const Task: React.FC = () => {
               <Text style={styles.accountCategoryText}>
                 {isEventMode ? 'Events' : 'Tasks'}
               </Text>
-              <Text style={styles.accountEmailText}>
-                {USER_EMAIL}
-              </Text>
+              <Text style={styles.accountEmailText}>{USER_EMAIL}</Text>
             </View>
           </View>
 
@@ -348,13 +346,17 @@ const Task: React.FC = () => {
                 }
               }}
               trackColor={{
-                false: '#3D3432',
+                false: CALENDAR_COLORS.swithTrack,
                 true: isEventMode
                   ? CALENDAR_COLORS.eventPill
                   : CALENDAR_COLORS.todayBadge,
               }}
               thumbColor={
-                isAllDay ? (isEventMode ? '#163832' : '#4A201A') : '#8C8280'
+                isAllDay
+                  ? isEventMode
+                    ? CALENDAR_COLORS.switchThumb
+                    : CALENDAR_COLORS.swithThumb_1
+                  : CALENDAR_COLORS.defaultSwithThumb
               }
             />
           </View>
@@ -362,7 +364,6 @@ const Task: React.FC = () => {
           <View style={styles.dateTimeContainer}>
             {isEventMode ? (
               isAllDay ? (
-            
                 <>
                   <View style={styles.dateTimeRowBetween}>
                     <TouchableOpacity
@@ -422,7 +423,6 @@ const Task: React.FC = () => {
                   )}
                 </>
               ) : (
-               
                 <>
                   {/* Start Row */}
                   <View style={styles.dateTimeRowBetween}>
@@ -473,7 +473,6 @@ const Task: React.FC = () => {
                 </>
               )
             ) : isAllDay ? (
-             
               <View style={styles.dateTimeRowBetween}>
                 <TouchableOpacity
                   onPress={() => openDatePicker('start')}
@@ -486,7 +485,6 @@ const Task: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-            
               <View style={styles.dateTimeRowBetween}>
                 <TouchableOpacity
                   onPress={() => openDatePicker('start')}
@@ -528,12 +526,6 @@ const Task: React.FC = () => {
                 {REPEAT_CHOICES.find(c => c.key === repeatOption)?.label ||
                   'Does not repeat'}
               </Text>
-              {repeatOption === 'none' && (
-                <Text style={styles.autoDeleteHint}>
-                  Auto-deletes when {isEventMode ? 'event' : 'task'} date
-                  arrives
-                </Text>
-              )}
             </View>
           </TouchableOpacity>
         </ScrollView>

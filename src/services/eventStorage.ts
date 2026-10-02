@@ -91,40 +91,10 @@ function getDatabase(): SQLiteDB | null {
 }
 
 /**
- * Removes non-repeating events whose end date has passed today.
+ * Auto-cleanup disabled: events are kept as they are after the event day is over.
  */
-export function cleanupExpiredEvents(targetDateStr?: string): number {
-  const todayStr = targetDateStr || formatDateString(new Date());
-
-  // 1. Clean in-memory: delete if doesNotRepeat is true AND endDate < todayStr
-  const beforeCount = memoryEvents.length;
-  memoryEvents = memoryEvents.filter(event => {
-    if (event.doesNotRepeat) {
-      return event.endDate >= todayStr;
-    }
-    return true;
-  });
-  const purgedMemoryCount = beforeCount - memoryEvents.length;
-
-  // 2. Clean in SQLite
-  const db = getDatabase();
-  if (db) {
-    try {
-      const deleteSql =
-        'DELETE FROM user_events WHERE does_not_repeat = 1 AND end_date < ?;';
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(deleteSql, [todayStr]);
-      } else if (typeof db.execute === 'function') {
-        Promise.resolve(db.execute(deleteSql, [todayStr])).catch((e: any) =>
-          console.warn('[EventStorage] Error during SQLite auto-cleanup:', e),
-        );
-      }
-    } catch (e) {
-      console.warn('[EventStorage] Error during SQLite auto-cleanup:', e);
-    }
-  }
-
-  return purgedMemoryCount;
+export function cleanupExpiredEvents(_targetDateStr?: string): number {
+  return 0;
 }
 
 /**
@@ -175,13 +145,10 @@ export async function saveEvent(event: UserEvent): Promise<void> {
 }
 
 /**
- * Loads all active user events, automatically purging expired non-repeating events.
+ * Loads all user events, keeping historical/past events permanently.
  */
 export async function loadEvents(): Promise<UserEvent[]> {
-  cleanupExpiredEvents();
-
   const db = getDatabase();
-  const todayStr = formatDateString(new Date());
 
   if (!db) {
     return [...memoryEvents];
@@ -205,34 +172,25 @@ export async function loadEvents(): Promise<UserEvent[]> {
         : (result?.rows as any)?._array || [];
     }
 
-    const loaded: UserEvent[] = rows
-      .map((r: any) => ({
-        id: String(r.id),
-        title: String(r.title),
-        description: r.description ? String(r.description) : '',
-        startDate: String(r.start_date),
-        startTime: r.start_time ? String(r.start_time) : undefined,
-        endDate: String(r.end_date),
-        endTime: r.end_time ? String(r.end_time) : undefined,
-        isAllDay: r.is_all_day === 1 || r.is_all_day === true,
-        doesNotRepeat: r.does_not_repeat === 1 || r.does_not_repeat === true,
-        repeatOption: r.repeat_option || 'none',
-        createdAt: Number(r.created_at) || Date.now(),
-      }))
-      .filter((e: UserEvent) => {
-        if (e.doesNotRepeat && e.endDate < todayStr) {
-          return false;
-        }
-        return true;
-      });
+    const loaded: UserEvent[] = rows.map((r: any) => ({
+      id: String(r.id),
+      title: String(r.title),
+      description: r.description ? String(r.description) : '',
+      startDate: String(r.start_date),
+      startTime: r.start_time ? String(r.start_time) : undefined,
+      endDate: String(r.end_date),
+      endTime: r.end_time ? String(r.end_time) : undefined,
+      isAllDay: r.is_all_day === 1 || r.is_all_day === true,
+      doesNotRepeat: r.does_not_repeat === 1 || r.does_not_repeat === true,
+      repeatOption: r.repeat_option || 'none',
+      createdAt: Number(r.created_at) || Date.now(),
+    }));
 
     const loadedMap = new Map(loaded.map(e => [e.id, e]));
     for (const memEvent of memoryEvents) {
       if (!loadedMap.has(memEvent.id)) {
-        if (!memEvent.doesNotRepeat || memEvent.endDate >= todayStr) {
-          loaded.push(memEvent);
-          loadedMap.set(memEvent.id, memEvent);
-        }
+        loaded.push(memEvent);
+        loadedMap.set(memEvent.id, memEvent);
       }
     }
 
@@ -245,26 +203,10 @@ export async function loadEvents(): Promise<UserEvent[]> {
 }
 
 /**
- * Deletes a user event by ID.
+ * Deletion feature removed: data is preserved permanently.
  */
-export async function deleteEvent(id: string): Promise<void> {
-  memoryEvents = memoryEvents.filter(e => e.id !== id);
-
-  const db = getDatabase();
-  if (db) {
-    try {
-      const deleteSql = 'DELETE FROM user_events WHERE id = ?;';
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(deleteSql, [id]);
-      } else if (typeof db.execute === 'function') {
-        await db.execute(deleteSql, [id]);
-      }
-    } catch (error) {
-      console.warn('[EventStorage] Error deleting event from SQLite:', error);
-    }
-  }
-
-  notifyListeners();
+export async function deleteEvent(_id: string): Promise<void> {
+  // Manual deletion removed as requested; data is preserved permanently
 }
 
 /**
@@ -315,7 +257,7 @@ export function convertEventsToEventsMap(
         title: displayTitle,
         date: d,
         time: event.startTime,
-        color: CALENDAR_COLORS.eventPill, // teal '#3EA898'
+        color: CALENDAR_COLORS.eventPill,
         isHoliday: false,
         isTask: false,
         doesNotRepeat: event.doesNotRepeat,

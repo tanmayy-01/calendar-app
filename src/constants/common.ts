@@ -33,7 +33,6 @@ export const REPEAT_CHOICES: {
   {
     key: 'none',
     label: 'Does not repeat',
-    subtitle: 'Auto-deleted after the event date passes',
   },
   { key: 'daily', label: 'Every day' },
   { key: 'weekly', label: 'Every week' },

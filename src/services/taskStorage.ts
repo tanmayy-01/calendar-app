@@ -96,38 +96,11 @@ function getDatabase(): SQLiteDB | null {
   return dbInstance;
 }
 
-export function cleanupExpiredTasks(targetDateStr?: string): number {
-  const todayStr = targetDateStr || formatDateString(new Date());
-
-  // 1. Clean in-memory: only delete if doesNotRepeat is true AND date < todayStr
-  const beforeCount = memoryTasks.length;
-  memoryTasks = memoryTasks.filter(task => {
-    if (task.doesNotRepeat) {
-      return task.date >= todayStr;
-    }
-    return true;
-  });
-  const purgedMemoryCount = beforeCount - memoryTasks.length;
-
-  // 2. Clean in SQLite
-  const db = getDatabase();
-  if (db) {
-    try {
-      const deleteSql =
-        'DELETE FROM user_tasks WHERE does_not_repeat = 1 AND date < ?;';
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(deleteSql, [todayStr]);
-      } else if (typeof db.execute === 'function') {
-        Promise.resolve(db.execute(deleteSql, [todayStr])).catch((e: any) =>
-          console.warn('[TaskStorage] Error during SQLite auto-cleanup:', e),
-        );
-      }
-    } catch (e) {
-      console.warn('[TaskStorage] Error during SQLite auto-cleanup:', e);
-    }
-  }
-
-  return purgedMemoryCount;
+/**
+ * Auto-cleanup disabled: tasks are kept as they are after the task day is over.
+ */
+export function cleanupExpiredTasks(_targetDateStr?: string): number {
+  return 0;
 }
 
 /**
@@ -176,13 +149,10 @@ export async function saveTask(task: UserTask): Promise<void> {
 }
 
 /**
- * Loads all active tasks, automatically purging expired non-repeating tasks.
+ * Loads all tasks, keeping historical/past tasks permanently.
  */
 export async function loadTasks(): Promise<UserTask[]> {
-  cleanupExpiredTasks();
-
   const db = getDatabase();
-  const todayStr = formatDateString(new Date());
 
   if (!db) {
     return [...memoryTasks];
@@ -206,32 +176,23 @@ export async function loadTasks(): Promise<UserTask[]> {
         : (result?.rows as any)?._array || [];
     }
 
-    const loaded: UserTask[] = rows
-      .map((r: any) => ({
-        id: String(r.id),
-        title: String(r.title),
-        description: r.description ? String(r.description) : '',
-        date: String(r.date),
-        time: r.time ? String(r.time) : undefined,
-        isAllDay: r.is_all_day === 1 || r.is_all_day === true,
-        doesNotRepeat: r.does_not_repeat === 1 || r.does_not_repeat === true,
-        repeatOption: r.repeat_option || 'none',
-        createdAt: Number(r.created_at) || Date.now(),
-      }))
-      .filter((t: UserTask) => {
-        if (t.doesNotRepeat && t.date < todayStr) {
-          return false;
-        }
-        return true;
-      });
+    const loaded: UserTask[] = rows.map((r: any) => ({
+      id: String(r.id),
+      title: String(r.title),
+      description: r.description ? String(r.description) : '',
+      date: String(r.date),
+      time: r.time ? String(r.time) : undefined,
+      isAllDay: r.is_all_day === 1 || r.is_all_day === true,
+      doesNotRepeat: r.does_not_repeat === 1 || r.does_not_repeat === true,
+      repeatOption: r.repeat_option || 'none',
+      createdAt: Number(r.created_at) || Date.now(),
+    }));
 
     const loadedMap = new Map(loaded.map(t => [t.id, t]));
     for (const memTask of memoryTasks) {
       if (!loadedMap.has(memTask.id)) {
-        if (!memTask.doesNotRepeat || memTask.date >= todayStr) {
-          loaded.push(memTask);
-          loadedMap.set(memTask.id, memTask);
-        }
+        loaded.push(memTask);
+        loadedMap.set(memTask.id, memTask);
       }
     }
 
@@ -244,26 +205,10 @@ export async function loadTasks(): Promise<UserTask[]> {
 }
 
 /**
- * Deletes a task by ID.
+ * Deletion feature removed: data is preserved permanently.
  */
-export async function deleteTask(id: string): Promise<void> {
-  memoryTasks = memoryTasks.filter(t => t.id !== id);
-
-  const db = getDatabase();
-  if (db) {
-    try {
-      const deleteSql = 'DELETE FROM user_tasks WHERE id = ?;';
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(deleteSql, [id]);
-      } else if (typeof db.execute === 'function') {
-        await db.execute(deleteSql, [id]);
-      }
-    } catch (error) {
-      console.warn('[TaskStorage] Error deleting task from SQLite:', error);
-    }
-  }
-
-  notifyListeners();
+export async function deleteTask(_id: string): Promise<void> {
+  // Manual deletion removed as requested; data is preserved permanently
 }
 
 /**

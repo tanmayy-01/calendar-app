@@ -29,4 +29,8 @@ export const CALENDAR_COLORS = {
   blue_dot_background: '#4285F4',
   timedborder:'#5CE0CC',
   minuteChip: 'rgba(246, 165, 146, 0.15)',
+  switchThumb:'#163832',
+  swithThumb_1:'#4A201A',
+  defaultSwithThumb:'#8C8280',
+  swithTrack:'#3D3432',
 } as const;
