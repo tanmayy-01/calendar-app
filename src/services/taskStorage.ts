@@ -1,17 +1,6 @@
 import { CALENDAR_COLORS } from '@/constants';
-import { UserTask, CalendarEvent } from '@/types';
-import { formatDateString } from '@/utils';
-
-interface SQLiteDB {
-  execute: (
-    sql: string,
-    params?: any[],
-  ) => Promise<{ rows?: any[] }> | { rows?: any[] };
-  executeSync?: (
-    sql: string,
-    params?: any[],
-  ) => { rows?: any[]; rowsAffected?: number };
-}
+import { UserTask, CalendarEvent, SQLiteDB } from '@/types';
+import { scheduleTaskNotification } from './notificationService';
 
 let dbInstance: SQLiteDB | null = null;
 let isInitialized = false;
@@ -97,13 +86,6 @@ function getDatabase(): SQLiteDB | null {
 }
 
 /**
- * Auto-cleanup disabled: tasks are kept as they are after the task day is over.
- */
-export function cleanupExpiredTasks(_targetDateStr?: string): number {
-  return 0;
-}
-
-/**
  * Saves a new task or updates an existing one.
  */
 export async function saveTask(task: UserTask): Promise<void> {
@@ -144,7 +126,14 @@ export async function saveTask(task: UserTask): Promise<void> {
     }
   }
 
-  // 3. Notify active calendar listeners
+  // 3. Schedule device notification trigger
+  try {
+    await scheduleTaskNotification(task);
+  } catch (error) {
+    console.warn('[TaskStorage] Error scheduling task notification:', error);
+  }
+
+  // 4. Notify active calendar listeners
   notifyListeners();
 }
 
@@ -204,12 +193,6 @@ export async function loadTasks(): Promise<UserTask[]> {
   }
 }
 
-/**
- * Deletion feature removed: data is preserved permanently.
- */
-export async function deleteTask(_id: string): Promise<void> {
-  // Manual deletion removed as requested; data is preserved permanently
-}
 
 /**
  * Converts user tasks into CalendarEvent map format keyed by 'YYYY-MM-DD'.

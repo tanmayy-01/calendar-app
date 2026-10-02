@@ -1,17 +1,7 @@
 import { CALENDAR_COLORS } from '@/constants';
-import { UserEvent, CalendarEvent } from '@/types';
+import { UserEvent, CalendarEvent, SQLiteDB } from '@/types';
 import { formatDateString } from '@/utils';
-
-interface SQLiteDB {
-  execute: (
-    sql: string,
-    params?: any[],
-  ) => Promise<{ rows?: any[] }> | { rows?: any[] };
-  executeSync?: (
-    sql: string,
-    params?: any[],
-  ) => { rows?: any[]; rowsAffected?: number };
-}
+import { scheduleEventNotification } from './notificationService';
 
 let dbInstance: SQLiteDB | null = null;
 let isInitialized = false;
@@ -91,13 +81,6 @@ function getDatabase(): SQLiteDB | null {
 }
 
 /**
- * Auto-cleanup disabled: events are kept as they are after the event day is over.
- */
-export function cleanupExpiredEvents(_targetDateStr?: string): number {
-  return 0;
-}
-
-/**
  * Saves a new user event or updates an existing one.
  */
 export async function saveEvent(event: UserEvent): Promise<void> {
@@ -140,7 +123,14 @@ export async function saveEvent(event: UserEvent): Promise<void> {
     }
   }
 
-  // 3. Notify listeners
+  // 3. Schedule device notification trigger
+  try {
+    await scheduleEventNotification(event);
+  } catch (error) {
+    console.warn('[EventStorage] Error scheduling event notification:', error);
+  }
+
+  // 4. Notify listeners
   notifyListeners();
 }
 
@@ -203,16 +193,12 @@ export async function loadEvents(): Promise<UserEvent[]> {
 }
 
 /**
- * Deletion feature removed: data is preserved permanently.
- */
-export async function deleteEvent(_id: string): Promise<void> {
-  // Manual deletion removed as requested; data is preserved permanently
-}
-
-/**
  * Returns an array of date strings ('YYYY-MM-DD') for every day in the range [startDateStr, endDateStr].
  */
-export function getDatesBetween(startDateStr: string, endDateStr: string): string[] {
+export function getDatesBetween(
+  startDateStr: string,
+  endDateStr: string,
+): string[] {
   if (startDateStr === endDateStr) return [startDateStr];
   if (startDateStr > endDateStr) return [startDateStr];
 

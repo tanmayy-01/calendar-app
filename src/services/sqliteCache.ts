@@ -1,16 +1,11 @@
 import { CALENDAR_COLORS } from '@/constants';
-import { CalendarEvent } from '@/types';
-
-interface SQLiteDB {
-  execute: (sql: string, params?: any[]) => Promise<{ rows?: any[] }> | { rows?: any[] };
-  executeSync?: (sql: string, params?: any[]) => { rows?: any[]; rowsAffected?: number };
-}
+import { CalendarEvent, SQLiteDB } from '@/types';
 
 let dbInstance: SQLiteDB | null = null;
 let isInitialized = false;
 
 /**
- * Lazily initialize the SQLite database 
+ * Lazily initialize the SQLite database
  */
 function getDatabase(): SQLiteDB | null {
   if (isInitialized) {
@@ -44,16 +39,19 @@ function getDatabase(): SQLiteDB | null {
         db.executeSync(createIndexSql);
       } else if (typeof db.execute === 'function') {
         Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
-          console.warn('[SQLiteCache] Table init error:', e)
+          console.warn('[SQLiteCache] Table init error:', e),
         );
         Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
-          console.warn('[SQLiteCache] Index init error:', e)
+          console.warn('[SQLiteCache] Index init error:', e),
         );
       }
       dbInstance = db;
     }
   } catch (error) {
-    console.info('[SQLiteCache] Native SQLite not initialized, using memory fallback:', (error as Error)?.message);
+    console.info(
+      '[SQLiteCache] Native SQLite not initialized, using memory fallback:',
+      (error as Error)?.message,
+    );
     dbInstance = null;
   }
 
@@ -65,13 +63,14 @@ function getDatabase(): SQLiteDB | null {
  */
 export function getHolidaysFromSQLite(
   year: number,
-  country: string
+  country: string,
 ): CalendarEvent[] | null {
   const db = getDatabase();
   if (!db) return null;
 
   try {
-    const selectSql = 'SELECT id, title, date, color, holiday_type FROM holidays_cache WHERE year = ? AND country = ?;';
+    const selectSql =
+      'SELECT id, title, date, color, holiday_type FROM holidays_cache WHERE year = ? AND country = ?;';
     const params = [year, country.toUpperCase()];
 
     let rows: any[] = [];
@@ -106,7 +105,7 @@ export function getHolidaysFromSQLite(
 export function saveHolidaysToSQLite(
   year: number,
   country: string,
-  events: CalendarEvent[]
+  events: CalendarEvent[],
 ): void {
   const db = getDatabase();
   if (!db || !events.length) return;
@@ -130,7 +129,7 @@ export function saveHolidaysToSQLite(
         db.executeSync(insertSql, params);
       } else if (typeof db.execute === 'function') {
         Promise.resolve(db.execute(insertSql, params)).catch((e: any) =>
-          console.warn('[SQLiteCache] Insert error:', e)
+          console.warn('[SQLiteCache] Insert error:', e),
         );
       }
     }
