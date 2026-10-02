@@ -5,6 +5,7 @@ export type RootStackParamList = {
   Task: {
     selectedDateString?: string;
     prefilledTime?: string;
+    mode?: 'task' | 'event';
   } | undefined;
 };
 

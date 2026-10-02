@@ -59,3 +59,18 @@ export const monthShort = [
 
 export const HOURS = Array.from({ length: 24 }, (_, i) => i);
 export const HOUR_SLOT_HEIGHT = scale.h(64);
+
+export const QUICK_MINUTES = [0, 15, 30, 45];
+export const HOURS_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+export const QUICK_TIME_PRESETS = [
+  '09:00 AM',
+  '10:00 AM',
+  '12:00 PM',
+  '02:00 PM',
+  '04:00 PM',
+  '06:00 PM',
+  '08:00 PM',
+];
+
+export const USER_EMAIL = 'tanmayshende007@gmail.com'

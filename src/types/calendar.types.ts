@@ -20,6 +20,20 @@ export interface UserTask {
   createdAt: number;
 }
 
+export interface UserEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string; // 'YYYY-MM-DD'
+  startTime?: string; // e.g. '10:00 AM'
+  endDate: string; // 'YYYY-MM-DD'
+  endTime?: string; // e.g. '11:00 AM'
+  isAllDay: boolean;
+  doesNotRepeat: boolean;
+  repeatOption: RepeatOption;
+  createdAt: number;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

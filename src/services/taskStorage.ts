@@ -96,10 +96,6 @@ function getDatabase(): SQLiteDB | null {
   return dbInstance;
 }
 
-/**
- * Automatically cleans up non-repeating tasks whose event date has passed.
- * "If I press the do not repeat button,. The event/task must be deleted automatically after the event date comes."
- */
 export function cleanupExpiredTasks(targetDateStr?: string): number {
   const todayStr = targetDateStr || formatDateString(new Date());
 
@@ -223,14 +219,12 @@ export async function loadTasks(): Promise<UserTask[]> {
         createdAt: Number(r.created_at) || Date.now(),
       }))
       .filter((t: UserTask) => {
-        // Double check auto-delete condition
         if (t.doesNotRepeat && t.date < todayStr) {
           return false;
         }
         return true;
       });
 
-    // Merge SQLite loaded tasks with any in-memory tasks to ensure no unsaved or in-flight tasks are dropped
     const loadedMap = new Map(loaded.map(t => [t.id, t]));
     for (const memTask of memoryTasks) {
       if (!loadedMap.has(memTask.id)) {
@@ -286,7 +280,7 @@ export function convertTasksToEventsMap(
     }
 
     const displayTitle =
-      task.time && !task.isAllDay ? `${task.time} ${task.title}` : task.title;
+      task.time ? `${task.time} ${task.title}` : task.title;
 
     map[task.date].push({
       id: task.id,

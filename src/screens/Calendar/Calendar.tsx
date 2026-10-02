@@ -13,7 +13,6 @@ import {
   WeekdayHeader,
   MonthView,
   FloatingActionButton,
-  AddEventModal,
   CreateActionModal,
   DayScheduleModal,
 } from './components';
@@ -22,10 +21,12 @@ import { CALENDAR_COLORS, SCREEN_NAMES } from '@/constants';
 import {
   getInitialHolidays,
   getHolidaysForYears,
-  saveTask,
   loadTasks,
   convertTasksToEventsMap,
   subscribeToTaskChanges,
+  loadEvents,
+  convertEventsToEventsMap,
+  subscribeToEventChanges,
 } from '@/services';
 import { styles } from './Calendar.styles';
 import { CalendarDay, CalendarEvent } from '@/types';
@@ -57,10 +58,9 @@ const Calendar: React.FC = () => {
     () => getInitialHolidays(),
   );
 
-  // Track loaded years to prevent redundant fetches
+
   const loadedYearsRef = useRef<Set<number>>(new Set([baseDate.getFullYear()]));
 
-  // Dynamically load real-time festivals/holidays for current and adjacent years
   useEffect(() => {
     const currentYear = currentMonthDate.getFullYear();
     const adjacentYears = [currentYear - 1, currentYear, currentYear + 1];
@@ -86,17 +86,9 @@ const Calendar: React.FC = () => {
     });
   }, [currentMonthDate]);
 
-  // Action sheet (speed-dial) modal visibility
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
-
-  // Day Schedule timeline modal visibility (opened on clicking any day cell)
   const [isDayScheduleModalVisible, setIsDayScheduleModalVisible] = useState(false);
 
-  // Add event/task dialog visibility and active mode
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'event' | 'task'>('event');
-
-  // Array of page indices for virtualized months list
   const pages = useMemo(
     () => Array.from({ length: TOTAL_MONTHS_COUNT }, (_, i) => i),
     [],
@@ -117,23 +109,32 @@ const Calendar: React.FC = () => {
     setSelectedDateString(formatDateString(today));
   }, []);
 
-  // Refresh and sync tasks from storage, automatically deleting expired non-repeating tasks
-  const refreshTasks = useCallback(async () => {
-    const tasks = await loadTasks();
+  // Refresh and sync tasks and user events from storage, automatically deleting expired non-repeating items
+  const refreshItems = useCallback(async () => {
+    const [tasks, userEvents] = await Promise.all([loadTasks(), loadEvents()]);
     const tasksMap = convertTasksToEventsMap(tasks);
+    const userEventsMap = convertEventsToEventsMap(userEvents);
 
     setEventsMap((prev) => {
       const merged: Record<string, CalendarEvent[]> = {};
 
-      // 1. Non-task events (holidays, festivals)
+      // 1. Base holidays/festivals (excluding user tasks and user events)
       for (const [dateStr, list] of Object.entries(prev)) {
-        const nonTasks = list.filter((e) => !e.isTask);
-        if (nonTasks.length > 0) {
-          merged[dateStr] = nonTasks;
+        const baseHolidays = list.filter(
+          (e) => !e.isTask && !e.id.startsWith('user-event-'),
+        );
+        if (baseHolidays.length > 0) {
+          merged[dateStr] = baseHolidays;
         }
       }
 
-      // 2. Prepend active tasks so they appear first in day cells
+      // 2. Add user events
+      for (const [dateStr, evtList] of Object.entries(userEventsMap)) {
+        const existing = merged[dateStr] || [];
+        merged[dateStr] = [...existing, ...evtList];
+      }
+
+      // 3. Prepend active tasks so they appear first in day cells
       for (const [dateStr, taskEvents] of Object.entries(tasksMap)) {
         const existing = merged[dateStr] || [];
         merged[dateStr] = [...taskEvents, ...existing];
@@ -145,21 +146,27 @@ const Calendar: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      refreshTasks();
-    }, [refreshTasks])
+      refreshItems();
+    }, [refreshItems])
   );
 
   useEffect(() => {
-    refreshTasks();
-  }, [refreshTasks]);
+    refreshItems();
+  }, [refreshItems]);
 
-  // Subscribe to live task changes
+  // Subscribe to live task and event changes
   useEffect(() => {
-    const unsubscribe = subscribeToTaskChanges(() => {
-      refreshTasks();
+    const unsubTasks = subscribeToTaskChanges(() => {
+      refreshItems();
     });
-    return unsubscribe;
-  }, [refreshTasks]);
+    const unsubEvents = subscribeToEventChanges(() => {
+      refreshItems();
+    });
+    return () => {
+      unsubTasks();
+      unsubEvents();
+    };
+  }, [refreshItems]);
 
   const handleOpenTaskModal = useCallback(
     (hour?: number) => {
@@ -169,9 +176,10 @@ const Calendar: React.FC = () => {
       if (typeof hour === 'number') {
         const period = hour >= 12 ? 'PM' : 'AM';
         const h12 = hour % 12 === 0 ? 12 : hour % 12;
-        prefilledTime = `${h12.toString().padStart(2, '0')}:00 ${period}`;
+        prefilledTime = `${h12}:00 ${period}`;
       }
       navigate(SCREEN_NAMES.TASK, {
+        mode: 'task',
         selectedDateString,
         prefilledTime,
       });
@@ -179,45 +187,23 @@ const Calendar: React.FC = () => {
     [selectedDateString],
   );
 
-  const handleOpenEventModal = useCallback(() => {
-    setIsActionModalVisible(false);
-    setIsDayScheduleModalVisible(false);
-    setModalMode('event');
-    setIsAddModalVisible(true);
-  }, []);
-
-  const handleAddEvent = useCallback(
-    (title: string, dateString: string, mode: 'event' | 'task' = 'event') => {
-      const isTask = mode === 'task';
-      if (isTask) {
-        saveTask({
-          id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          title,
-          date: dateString,
-          isAllDay: true,
-          doesNotRepeat: true,
-          repeatOption: 'none',
-          createdAt: Date.now(),
-        });
-      } else {
-        setEventsMap((prev) => {
-          const existing = prev[dateString] || [];
-          const newEvent: CalendarEvent = {
-            id: `${dateString}-${Date.now()}`,
-            title,
-            date: dateString,
-            color: CALENDAR_COLORS.eventPill,
-            isHoliday: false,
-            isTask: false,
-          };
-          return {
-            ...prev,
-            [dateString]: [...existing, newEvent],
-          };
-        });
+  const handleOpenEventModal = useCallback(
+    (hour?: number) => {
+      setIsActionModalVisible(false);
+      setIsDayScheduleModalVisible(false);
+      let prefilledTime: string | undefined;
+      if (typeof hour === 'number') {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const h12 = hour % 12 === 0 ? 12 : hour % 12;
+        prefilledTime = `${h12}:00 ${period}`;
       }
+      navigate(SCREEN_NAMES.TASK, {
+        mode: 'event',
+        selectedDateString,
+        prefilledTime,
+      });
     },
-    [],
+    [selectedDateString],
   );
 
   const handleScrollEnd = useCallback(
@@ -312,7 +298,7 @@ const Calendar: React.FC = () => {
       {/* Floating Action Button */}
       <FloatingActionButton onPress={() => setIsActionModalVisible(true)} />
 
-      {/* Speed Dial Action Modal (Task & Event Options matching design) */}
+      {/* Speed Dial Action Modal */}
       <CreateActionModal
         visible={isActionModalVisible}
         onClose={() => setIsActionModalVisible(false)}
@@ -320,16 +306,7 @@ const Calendar: React.FC = () => {
         onPressEvent={handleOpenEventModal}
       />
 
-      {/* Add Event / Task Input Modal */}
-      <AddEventModal
-        visible={isAddModalVisible}
-        selectedDateString={selectedDateString}
-        onClose={() => setIsAddModalVisible(false)}
-        onAddEvent={handleAddEvent}
-        mode={modalMode}
-      />
-
-      {/* Day Schedule Timeline Modal (Opens when day cell is clicked) */}
+      {/* Day Schedule Timeline Modal */}
       <DayScheduleModal
         visible={isDayScheduleModalVisible}
         dateString={selectedDateString}

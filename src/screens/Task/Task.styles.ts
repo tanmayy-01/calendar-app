@@ -117,6 +117,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: CALENDAR_COLORS.background,
   },
+  eventDotBadge: {
+    position: 'absolute',
+    bottom: -scale.h(1),
+    right: -scale.w(1),
+    width: scale.w(8),
+    height: scale.w(8),
+    borderRadius: scale.w(4),
+    backgroundColor: CALENDAR_COLORS.eventPill,
+    borderWidth: 1.5,
+    borderColor: CALENDAR_COLORS.background,
+  },
   descriptionInput: {
     flex: 1,
     fontSize: FONT_SIZES.sm,
@@ -145,9 +156,65 @@ export const styles = StyleSheet.create({
     paddingRight: scale.w(20),
     paddingVertical: scale.h(8),
   },
-  dateDisplayText: {
-    fontSize: FONT_SIZES.sm,
+  dateTimeContainer: {
+    paddingTop: scale.h(4),
+    paddingBottom: scale.h(12),
+  },
+  dateTimeRowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: scale.w(64),
+    paddingRight: scale.w(20),
+    minHeight: scale.h(32),
+  },
+  dateTimeText: {
+    fontSize: scale.ms(15),
+    fontWeight: FONT_WEIGHTS.regular,
+    color: CALENDAR_COLORS.textPrimary,
+  },
+  addEndDateButtonText: {
+    fontSize: scale.ms(13),
     fontWeight: FONT_WEIGHTS.medium,
+    color: CALENDAR_COLORS.eventPill,
+  },
+  eventDateRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: scale.w(64),
+    paddingRight: scale.w(20),
+    paddingVertical: scale.h(8),
+    gap: scale.w(10),
+  },
+  eventDateChip: {
+    flex: 1,
+    paddingHorizontal: scale.w(12),
+    paddingVertical: scale.h(8),
+    borderRadius: scale.ms(8),
+    backgroundColor: CALENDAR_COLORS.surface,
+    borderWidth: 1,
+    borderColor: CALENDAR_COLORS.gridBorder,
+  },
+  eventDateChipLabel: {
+    fontSize: scale.ms(10),
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: CALENDAR_COLORS.textDimmed,
+    marginBottom: scale.h(2),
+  },
+  eventDateTimeSection: {
+    paddingLeft: scale.w(64),
+    paddingRight: scale.w(20),
+    paddingVertical: scale.h(6),
+  },
+  eventDateTimeLabel: {
+    fontSize: scale.ms(10),
+    fontWeight: FONT_WEIGHTS.bold,
+    color: CALENDAR_COLORS.textDimmed,
+    marginBottom: scale.h(2),
+  },
+  dateDisplayText: {
+    fontSize: scale.ms(15),
+    fontWeight: FONT_WEIGHTS.regular,
     color: CALENDAR_COLORS.textPrimary,
   },
   repeatRowContent: {
@@ -163,7 +230,6 @@ export const styles = StyleSheet.create({
     color: CALENDAR_COLORS.todayBadge,
     marginTop: scale.h(2),
   },
-  // Modal Overlays
   modalOverlay: {
     flex: 1,
     backgroundColor: CALENDAR_COLORS.overlay,
@@ -240,7 +306,6 @@ export const styles = StyleSheet.create({
       },
     }),
   },
-  // Date & Time Chips row
   dateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -273,7 +338,6 @@ export const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.semibold,
     color: CALENDAR_COLORS.todayBadge,
   },
-  // Time Picker Modal styles
   timeModalCard: {
     width: '100%',
     backgroundColor: CALENDAR_COLORS.surface,
@@ -413,6 +477,37 @@ export const styles = StyleSheet.create({
   hourBtnTextActive: {
     color: CALENDAR_COLORS.todayText,
     fontWeight: FONT_WEIGHTS.bold,
+  },
+  minutesRow: {
+    flexDirection: 'row',
+    gap: scale.w(8),
+    marginBottom: scale.h(8),
+  },
+  minuteChip: {
+    paddingHorizontal: scale.w(12),
+    paddingVertical: scale.h(6),
+    borderRadius: scale.ms(8),
+    backgroundColor: CALENDAR_COLORS.background,
+    borderWidth: 1,
+    borderColor: CALENDAR_COLORS.gridBorder,
+  },
+  minuteChipActive: {
+    backgroundColor: CALENDAR_COLORS.minuteChip,
+    borderColor: CALENDAR_COLORS.todayBadge,
+  },
+  minuteChipText: {
+    fontSize: scale.ms(12),
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: CALENDAR_COLORS.textSecondary,
+  },
+  minuteChipTextActive: {
+    color: CALENDAR_COLORS.todayBadge,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  dateRangeArrow: {
+    fontSize: FONT_SIZES.lg,
+    color: CALENDAR_COLORS.textDimmed,
+    marginHorizontal: scale.w(2),
   },
   modalActionsRow: {
     flexDirection: 'row',

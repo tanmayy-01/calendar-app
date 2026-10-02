@@ -15,64 +15,40 @@ import {
   CALENDAR_COLORS,
   FONT_SIZES,
   FONT_WEIGHTS,
+  HOURS_LIST,
   ICON_NAMES,
+  QUICK_MINUTES,
+  QUICK_TIME_PRESETS,
   REPEAT_CHOICES,
+  USER_EMAIL,
 } from '@/constants';
 import { IconProvider } from '@/lib/icons';
 import { scale } from '@/lib/scale';
-import { RepeatOption, UserTask, TaskScreenRouteProp } from '@/types';
-import { formatDateString, formatDisplayDate } from '@/utils';
+import {
+  RepeatOption,
+  UserTask,
+  UserEvent,
+  TaskScreenRouteProp,
+} from '@/types';
+import {
+  formatDateString,
+  formatDisplayDate,
+  getInitialTime,
+  parseTimeString,
+  formatTimeString,
+  addHoursToTime,
+} from '@/utils';
 import { saveTask } from '@/services/taskStorage';
+import { saveEvent } from '@/services/eventStorage';
 import { styles } from './Task.styles';
 import * as navigation from '@/utils';
 
-function parseTimeString(timeStr: string): { hour: number; minute: number; period: 'AM' | 'PM' } {
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match) {
-    return {
-      hour: Math.max(1, Math.min(12, parseInt(match[1], 10))),
-      minute: Math.max(0, Math.min(59, parseInt(match[2], 10))),
-      period: match[3].toUpperCase() as 'AM' | 'PM',
-    };
-  }
-  return { hour: 10, minute: 0, period: 'AM' };
-}
-
-function formatTimeString(
-  hour: number | string,
-  minute: number | string,
-  period: 'AM' | 'PM',
-): string {
-  const h = Math.max(1, Math.min(12, Number(hour) || 12));
-  const m = Math.max(0, Math.min(59, Number(minute) || 0));
-  return `${h}:${String(m).padStart(2, '0')} ${period}`;
-}
-
-function getInitialTime(): string {
-  const now = new Date();
-  const nextHour = now.getHours() + 1;
-  const period: 'AM' | 'PM' = nextHour >= 12 && nextHour < 24 ? 'PM' : 'AM';
-  const hour12 = nextHour % 12 === 0 ? 12 : nextHour % 12;
-  return `${hour12}:00 ${period}`;
-}
-
-const QUICK_TIME_PRESETS = [
-  '09:00 AM',
-  '10:00 AM',
-  '12:00 PM',
-  '02:00 PM',
-  '04:00 PM',
-  '06:00 PM',
-  '08:00 PM',
-];
-
-const QUICK_MINUTES = [0, 15, 30, 45];
-const HOURS_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
 const Task: React.FC = () => {
   const route = useRoute<TaskScreenRouteProp>();
+  const mode = route.params?.mode || 'task';
+  const isEventMode = mode === 'event';
 
-  // Today's date string (YYYY-MM-DD)
+  // Today's date (YYYY-MM-DD)
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => formatDateString(today), [today]);
 
@@ -93,85 +69,155 @@ const Task: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isAllDay, setIsAllDay] = useState(
-    () => !route.params?.prefilledTime,
-  );
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [isAllDay, setIsAllDay] = useState(false);
+
+  // Start & End dates
+  const [startDate, setStartDate] = useState<Date>(initialDate);
+  const [endDate, setEndDate] = useState<Date>(initialDate);
+
+  // Repeat selection
   const [repeatOption, setRepeatOption] = useState<RepeatOption>('none');
 
-  // Time state for when isAllDay is false
-  const [selectedTime, setSelectedTime] = useState<string>(
+  // Time states
+  const [startTime, setStartTime] = useState<string>(
     () => route.params?.prefilledTime || getInitialTime(),
   );
+  const [endTime, setEndTime] = useState<string>(() =>
+    addHoursToTime(route.params?.prefilledTime || getInitialTime(), 1),
+  );
+
+  const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end'>(
+    'start',
+  );
+  const [timePickerTarget, setTimePickerTarget] = useState<'start' | 'end'>(
+    'start',
+  );
+
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+  const [isRepeatPickerVisible, setIsRepeatPickerVisible] = useState(false);
 
   // Time picker modal temporary states
   const [tempHour, setTempHour] = useState<number>(
-    () => parseTimeString(selectedTime).hour,
+    () => parseTimeString(startTime).hour,
   );
   const [tempMinute, setTempMinute] = useState<number>(
-    () => parseTimeString(selectedTime).minute,
+    () => parseTimeString(startTime).minute,
   );
   const [tempPeriod, setTempPeriod] = useState<'AM' | 'PM'>(
-    () => parseTimeString(selectedTime).period,
+    () => parseTimeString(startTime).period,
   );
 
-  const openTimePicker = useCallback(() => {
-    const parsed = parseTimeString(selectedTime);
-    setTempHour(parsed.hour);
-    setTempMinute(parsed.minute);
-    setTempPeriod(parsed.period);
-    setIsTimePickerVisible(true);
-  }, [selectedTime]);
+  const openDatePicker = useCallback((target: 'start' | 'end' = 'start') => {
+    setDatePickerTarget(target);
+    setIsDatePickerVisible(true);
+  }, []);
+
+  const openTimePicker = useCallback(
+    (target: 'start' | 'end' = 'start') => {
+      setTimePickerTarget(target);
+      const targetTime = target === 'start' ? startTime : endTime;
+      const parsed = parseTimeString(targetTime);
+      setTempHour(parsed.hour);
+      setTempMinute(parsed.minute);
+      setTempPeriod(parsed.period);
+      setIsTimePickerVisible(true);
+    },
+    [startTime, endTime],
+  );
 
   const confirmTime = useCallback(() => {
     const formatted = formatTimeString(tempHour, tempMinute, tempPeriod);
-    setSelectedTime(formatted);
+    if (timePickerTarget === 'start') {
+      setStartTime(formatted);
+      if (formatDateString(startDate) === formatDateString(endDate)) {
+        setEndTime(addHoursToTime(formatted, 1));
+      }
+    } else {
+      setEndTime(formatted);
+    }
     setIsTimePickerVisible(false);
-  }, [tempHour, tempMinute, tempPeriod]);
-
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [isRepeatPickerVisible, setIsRepeatPickerVisible] = useState(false);
+  }, [tempHour, tempMinute, tempPeriod, timePickerTarget, startDate, endDate]);
 
   const canSave = title.trim().length > 0;
 
   const handleSave = useCallback(async () => {
     if (!title.trim()) {
-      Alert.alert('Required', 'Please enter a task title.');
+      Alert.alert(
+        'Required',
+        isEventMode
+          ? 'Please enter an event title.'
+          : 'Please enter a task title.',
+      );
       return;
     }
 
-    const dateStr = formatDateString(selectedDate);
-    if (dateStr < todayStr) {
+    const sDateStr = formatDateString(startDate);
+    const eDateStr = formatDateString(endDate);
+
+    if (sDateStr < todayStr) {
       Alert.alert(
         'Invalid Date',
-        'Tasks can only be scheduled for today or future dates.',
+        `${
+          isEventMode ? 'Events' : 'Tasks'
+        } can only be scheduled for today or future dates.`,
+      );
+      return;
+    }
+
+    if (isEventMode && eDateStr < sDateStr) {
+      Alert.alert(
+        'Invalid Date',
+        'End date cannot be earlier than start date.',
       );
       return;
     }
 
     const doesNotRepeat = repeatOption === 'none';
 
-    const newTask: UserTask = {
-      id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      title: title.trim(),
-      description: description.trim(),
-      date: dateStr,
-      time: isAllDay ? undefined : selectedTime,
-      isAllDay,
-      doesNotRepeat,
-      repeatOption,
-      createdAt: Date.now(),
-    };
+    if (isEventMode) {
+      const newEvent: UserEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        title: title.trim(),
+        description: description.trim(),
+        startDate: sDateStr,
+        startTime: isAllDay ? undefined : startTime,
+        endDate: eDateStr,
+        endTime: isAllDay ? undefined : endTime,
+        isAllDay,
+        doesNotRepeat,
+        repeatOption,
+        createdAt: Date.now(),
+      };
+      await saveEvent(newEvent);
+    } else {
+      const newTask: UserTask = {
+        id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        title: title.trim(),
+        description: description.trim(),
+        date: sDateStr,
+        time: isAllDay ? undefined : startTime,
+        isAllDay,
+        doesNotRepeat,
+        repeatOption,
+        createdAt: Date.now(),
+      };
+      await saveTask(newTask);
+    }
 
-    await saveTask(newTask);
     navigation.goBack();
-  }, [title, description, selectedDate, todayStr, isAllDay, selectedTime, repeatOption]);
-
-  const selectedDateStr = useMemo(
-    () => formatDateString(selectedDate),
-    [selectedDate],
-  );
+  }, [
+    title,
+    description,
+    startDate,
+    endDate,
+    todayStr,
+    isAllDay,
+    startTime,
+    endTime,
+    repeatOption,
+    isEventMode,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -182,7 +228,7 @@ const Task: React.FC = () => {
             style={styles.closeButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
-            accessibilityLabel="Close task screen"
+            accessibilityLabel="Close screen"
           >
             <IconProvider
               name={ICON_NAMES.CLOSE}
@@ -196,7 +242,7 @@ const Task: React.FC = () => {
             onPress={handleSave}
             disabled={!canSave}
             activeOpacity={0.8}
-            accessibilityLabel="Save task"
+            accessibilityLabel={isEventMode ? 'Save event' : 'Save task'}
           >
             <Text
               style={[
@@ -217,7 +263,7 @@ const Task: React.FC = () => {
           <View style={styles.titleSection}>
             <TextInput
               style={styles.titleInput}
-              placeholder="Add title"
+              placeholder={isEventMode ? 'Add event title' : 'Add title'}
               placeholderTextColor={CALENDAR_COLORS.textDimmed}
               value={title}
               onChangeText={setTitle}
@@ -234,16 +280,26 @@ const Task: React.FC = () => {
                 <IconProvider
                   name={ICON_NAMES.CALENDAR_SOLID}
                   size={scale.ms(22)}
-                  color={CALENDAR_COLORS.textSecondary}
+                  color={
+                    isEventMode
+                      ? CALENDAR_COLORS.eventPill
+                      : CALENDAR_COLORS.textSecondary
+                  }
                 />
-                <View style={styles.blueDotBadge} />
+                <View
+                  style={
+                    isEventMode ? styles.eventDotBadge : styles.blueDotBadge
+                  }
+                />
               </View>
             </View>
 
             <View style={styles.contentColumn}>
-              <Text style={styles.accountCategoryText}>Tasks</Text>
+              <Text style={styles.accountCategoryText}>
+                {isEventMode ? 'Events' : 'Tasks'}
+              </Text>
               <Text style={styles.accountEmailText}>
-                tanmayshende007@gmail.com
+                {USER_EMAIL}
               </Text>
             </View>
           </View>
@@ -261,7 +317,7 @@ const Task: React.FC = () => {
             <View style={styles.contentColumn}>
               <TextInput
                 style={styles.descriptionInput}
-                placeholder="Add details"
+                placeholder={isEventMode ? 'Add description' : 'Add details'}
                 placeholderTextColor={CALENDAR_COLORS.textDimmed}
                 value={description}
                 onChangeText={setDescription}
@@ -288,58 +344,170 @@ const Task: React.FC = () => {
               onValueChange={val => {
                 setIsAllDay(val);
                 if (!val) {
-                  openTimePicker();
+                  openTimePicker('start');
                 }
               }}
               trackColor={{
-                false: CALENDAR_COLORS.surface,
-                true: CALENDAR_COLORS.todayBadge,
+                false: '#3D3432',
+                true: isEventMode
+                  ? CALENDAR_COLORS.eventPill
+                  : CALENDAR_COLORS.todayBadge,
               }}
               thumbColor={
-                isAllDay
-                  ? CALENDAR_COLORS.todayText
-                  : CALENDAR_COLORS.textDimmed
+                isAllDay ? (isEventMode ? '#163832' : '#4A201A') : '#8C8280'
               }
             />
           </View>
 
-          {/* Date & Time Row */}
-          {isAllDay ? (
-            <TouchableOpacity
-              style={styles.dateIndentedRow}
-              onPress={() => setIsDatePickerVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.dateDisplayText}>
-                {formatDisplayDate(selectedDate)}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.dateTimeRow}>
-              <TouchableOpacity
-                style={styles.dateChip}
-                onPress={() => setIsDatePickerVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.dateDisplayText}>
-                  {formatDisplayDate(selectedDate)}
-                </Text>
-              </TouchableOpacity>
+          <View style={styles.dateTimeContainer}>
+            {isEventMode ? (
+              isAllDay ? (
+            
+                <>
+                  <View style={styles.dateTimeRowBetween}>
+                    <TouchableOpacity
+                      onPress={() => openDatePicker('start')}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.dateTimeText}>
+                        {formatDisplayDate(startDate)}
+                      </Text>
+                    </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.timeChip}
-                onPress={openTimePicker}
-                activeOpacity={0.7}
-              >
-                <IconProvider
-                  name={ICON_NAMES.TIME}
-                  size={scale.ms(16)}
-                  color={CALENDAR_COLORS.todayBadge}
-                />
-                <Text style={styles.timeChipText}>{selectedTime}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                    {formatDateString(startDate) ===
+                      formatDateString(endDate) && (
+                      <TouchableOpacity
+                        onPress={() => openDatePicker('end')}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.addEndDateButtonText}>
+                          + End date
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {formatDateString(startDate) !==
+                    formatDateString(endDate) && (
+                    <View
+                      style={[
+                        styles.dateTimeRowBetween,
+                        { marginTop: scale.h(12) },
+                      ]}
+                    >
+                      <TouchableOpacity
+                        onPress={() => openDatePicker('end')}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.dateTimeText}>
+                          {formatDisplayDate(endDate)}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setEndDate(startDate)}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <IconProvider
+                          name={ICON_NAMES.CLOSE}
+                          size={scale.ms(16)}
+                          color={CALENDAR_COLORS.textDimmed}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+               
+                <>
+                  {/* Start Row */}
+                  <View style={styles.dateTimeRowBetween}>
+                    <TouchableOpacity
+                      onPress={() => openDatePicker('start')}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.dateTimeText}>
+                        {formatDisplayDate(startDate)}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => openTimePicker('start')}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.dateTimeText}>{startTime}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* End Row */}
+                  <View
+                    style={[
+                      styles.dateTimeRowBetween,
+                      { marginTop: scale.h(12) },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => openDatePicker('end')}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.dateTimeText}>
+                        {formatDisplayDate(endDate)}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => openTimePicker('end')}
+                      activeOpacity={0.6}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.dateTimeText}>{endTime}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )
+            ) : isAllDay ? (
+             
+              <View style={styles.dateTimeRowBetween}>
+                <TouchableOpacity
+                  onPress={() => openDatePicker('start')}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.dateTimeText}>
+                    {formatDisplayDate(startDate)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+            
+              <View style={styles.dateTimeRowBetween}>
+                <TouchableOpacity
+                  onPress={() => openDatePicker('start')}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.dateTimeText}>
+                    {formatDisplayDate(startDate)}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => openTimePicker('start')}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.dateTimeText}>{startTime}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           {/* Repeat Option Row */}
           <TouchableOpacity
@@ -362,7 +530,8 @@ const Task: React.FC = () => {
               </Text>
               {repeatOption === 'none' && (
                 <Text style={styles.autoDeleteHint}>
-                  Auto-deletes when date arrives
+                  Auto-deletes when {isEventMode ? 'event' : 'task'} date
+                  arrives
                 </Text>
               )}
             </View>
@@ -417,7 +586,11 @@ const Task: React.FC = () => {
                     <IconProvider
                       name={ICON_NAMES.CHECKMARK}
                       size={scale.ms(20)}
-                      color={CALENDAR_COLORS.todayBadge}
+                      color={
+                        isEventMode
+                          ? CALENDAR_COLORS.eventPill
+                          : CALENDAR_COLORS.todayBadge
+                      }
                     />
                   )}
                 </TouchableOpacity>
@@ -444,20 +617,46 @@ const Task: React.FC = () => {
             onStartShouldSetResponder={() => true}
           >
             <Calendar
-              current={selectedDateStr}
-              minDate={todayStr}
+              current={
+                datePickerTarget === 'start'
+                  ? formatDateString(startDate)
+                  : formatDateString(endDate)
+              }
+              minDate={
+                datePickerTarget === 'start'
+                  ? todayStr
+                  : formatDateString(startDate)
+              }
               disableAllTouchEventsForDisabledDays={true}
               onDayPress={(day: DateData) => {
-                if (day.dateString < todayStr) return;
+                const minCheck =
+                  datePickerTarget === 'start'
+                    ? todayStr
+                    : formatDateString(startDate);
+                if (day.dateString < minCheck) return;
+
                 const parts = day.dateString.split('-').map(Number);
-                setSelectedDate(new Date(parts[0], parts[1] - 1, parts[2]));
+                const picked = new Date(parts[0], parts[1] - 1, parts[2]);
+
+                if (datePickerTarget === 'start') {
+                  setStartDate(picked);
+                  if (formatDateString(picked) > formatDateString(endDate)) {
+                    setEndDate(picked);
+                  }
+                } else {
+                  setEndDate(picked);
+                }
                 setIsDatePickerVisible(false);
               }}
               markedDates={{
-                [selectedDateStr]: {
+                [datePickerTarget === 'start'
+                  ? formatDateString(startDate)
+                  : formatDateString(endDate)]: {
                   selected: true,
-                  selectedColor: CALENDAR_COLORS.todayBadge,
-                  selectedTextColor: CALENDAR_COLORS.todayText,
+                  selectedColor: isEventMode
+                    ? CALENDAR_COLORS.eventPill
+                    : CALENDAR_COLORS.todayBadge,
+                  selectedTextColor: CALENDAR_COLORS.white,
                 },
               }}
               enableSwipeMonths={true}
@@ -465,13 +664,19 @@ const Task: React.FC = () => {
                 backgroundColor: CALENDAR_COLORS.surface,
                 calendarBackground: CALENDAR_COLORS.surface,
                 textSectionTitleColor: CALENDAR_COLORS.textDimmed,
-                selectedDayBackgroundColor: CALENDAR_COLORS.todayBadge,
-                selectedDayTextColor: CALENDAR_COLORS.todayText,
-                todayTextColor: CALENDAR_COLORS.todayBadge,
+                selectedDayBackgroundColor: isEventMode
+                  ? CALENDAR_COLORS.eventPill
+                  : CALENDAR_COLORS.todayBadge,
+                selectedDayTextColor: CALENDAR_COLORS.white,
+                todayTextColor: isEventMode
+                  ? CALENDAR_COLORS.eventPill
+                  : CALENDAR_COLORS.todayBadge,
                 dayTextColor: CALENDAR_COLORS.textPrimary,
                 textDisabledColor: CALENDAR_COLORS.textDimmed,
                 monthTextColor: CALENDAR_COLORS.textPrimary,
-                arrowColor: CALENDAR_COLORS.todayBadge,
+                arrowColor: isEventMode
+                  ? CALENDAR_COLORS.eventPill
+                  : CALENDAR_COLORS.todayBadge,
                 textDayFontWeight: FONT_WEIGHTS.medium,
                 textMonthFontWeight: FONT_WEIGHTS.bold,
                 textDayHeaderFontWeight: FONT_WEIGHTS.semibold,
@@ -500,7 +705,9 @@ const Task: React.FC = () => {
             style={styles.timeModalCard}
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.modalHeaderTitle}>Select time</Text>
+            <Text style={styles.modalHeaderTitle}>
+              {isEventMode ? `Select ${timePickerTarget} time` : 'Select time'}
+            </Text>
 
             {/* Interactive Digital Clock Display */}
             <View style={styles.timeDisplayRow}>
@@ -648,23 +855,23 @@ const Task: React.FC = () => {
 
             {/* Quick Minute Chips */}
             <Text style={styles.timeSectionSubtitle}>Minute</Text>
-            <View style={styles.quickChipsRow}>
+            <View style={styles.minutesRow}>
               {QUICK_MINUTES.map(m => {
                 const isActive = tempMinute === m;
                 return (
                   <TouchableOpacity
                     key={`m-${m}`}
                     style={[
-                      styles.quickChip,
-                      isActive && styles.quickChipActive,
+                      styles.minuteChip,
+                      isActive && styles.minuteChipActive,
                     ]}
                     onPress={() => setTempMinute(m)}
                     activeOpacity={0.7}
                   >
                     <Text
                       style={[
-                        styles.quickChipText,
-                        isActive && styles.quickChipTextActive,
+                        styles.minuteChipText,
+                        isActive && styles.minuteChipTextActive,
                       ]}
                     >
                       :{String(m).padStart(2, '0')}
@@ -674,7 +881,7 @@ const Task: React.FC = () => {
               })}
             </View>
 
-            {/* Action Buttons */}
+            {/* Modal Bottom Actions */}
             <View style={styles.modalActionsRow}>
               <TouchableOpacity
                 style={styles.modalActionCancelBtn}
@@ -685,11 +892,14 @@ const Task: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.modalActionConfirmBtn}
+                style={[
+                  styles.modalActionConfirmBtn,
+                  isEventMode && { backgroundColor: CALENDAR_COLORS.eventPill },
+                ]}
                 onPress={confirmTime}
                 activeOpacity={0.8}
               >
-                <Text style={styles.modalActionConfirmText}>Set time</Text>
+                <Text style={styles.modalActionConfirmText}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>

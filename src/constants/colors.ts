@@ -28,4 +28,5 @@ export const CALENDAR_COLORS = {
   task_event: '#1E3A5F',
   blue_dot_background: '#4285F4',
   timedborder:'#5CE0CC',
+  minuteChip: 'rgba(246, 165, 146, 0.15)',
 } as const;
