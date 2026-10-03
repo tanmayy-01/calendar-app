@@ -34,17 +34,17 @@ function getDatabase(): SQLiteDB | null {
         ON holidays_cache(year, country);
       `;
 
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(createTableSql);
-        db.executeSync(createIndexSql);
-      } else if (typeof db.execute === 'function') {
-        Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
-          console.warn('[SQLiteCache] Table init error:', e),
-        );
-        Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
-          console.warn('[SQLiteCache] Index init error:', e),
-        );
-      }
+      db.execute(createTableSql);
+      db.execute(createIndexSql);
+      // if (typeof db.executeSync === 'function') {
+      // } else if (typeof db.execute === 'function') {
+      //   Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
+      //     console.warn('[SQLiteCache] Table init error:', e),
+      //   );
+      //   Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
+      //     console.warn('[SQLiteCache] Index init error:', e),
+      //   );
+      // }
       dbInstance = db;
     }
   } catch (error) {

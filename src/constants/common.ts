@@ -72,4 +72,7 @@ export const QUICK_TIME_PRESETS = [
   '08:00 PM',
 ];
 
-export const USER_EMAIL = 'tanmayshende007@gmail.com'
+export const USER_EMAIL = 'tanmayshende007@gmail.com';
+
+export const REMINDERS_CHANNEL_ID = 'calendar_reminders';
+export const REMINDERS_CHANNEL_NAME = 'Task & Event Reminders';

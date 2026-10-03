@@ -53,25 +53,25 @@ function getDatabase(): SQLiteDB | null {
         ON user_tasks(date);
       `;
 
-      if (typeof db.executeSync === 'function') {
-        db.executeSync(createTableSql);
-        db.executeSync(createIndexSql);
-        try {
-          db.executeSync('ALTER TABLE user_tasks ADD COLUMN time TEXT;');
-        } catch {
-          // Column already exists
-        }
-      } else if (typeof db.execute === 'function') {
-        Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
-          console.warn('[TaskStorage] Table init error:', e),
-        );
-        Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
-          console.warn('[TaskStorage] Index init error:', e),
-        );
-        Promise.resolve(db.execute('ALTER TABLE user_tasks ADD COLUMN time TEXT;')).catch(
-          () => {},
-        );
+      db.execute(createTableSql);
+      db.execute(createIndexSql);
+      try {
+        db.execute('ALTER TABLE user_tasks ADD COLUMN time TEXT;');
+      } catch {
+        // Column already exists
       }
+      // if (typeof db.executeSync === 'function') {
+      // } else if (typeof db.execute === 'function') {
+      //   Promise.resolve(db.execute(createTableSql)).catch((e: any) =>
+      //     console.warn('[TaskStorage] Table init error:', e),
+      //   );
+      //   Promise.resolve(db.execute(createIndexSql)).catch((e: any) =>
+      //     console.warn('[TaskStorage] Index init error:', e),
+      //   );
+      //   Promise.resolve(db.execute('ALTER TABLE user_tasks ADD COLUMN time TEXT;')).catch(
+      //     () => {},
+      //   );
+      // }
       dbInstance = db;
     }
   } catch (error) {

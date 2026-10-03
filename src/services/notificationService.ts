@@ -7,9 +7,7 @@ import notifee, {
   TriggerType,
 } from '@notifee/react-native';
 import { UserTask, UserEvent } from '@/types';
-
-export const REMINDERS_CHANNEL_ID = 'calendar_reminders';
-export const REMINDERS_CHANNEL_NAME = 'Task & Event Reminders';
+import { REMINDERS_CHANNEL_ID, REMINDERS_CHANNEL_NAME } from '@/constants';
 
 let isInitialized = false;
 

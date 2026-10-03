@@ -17,7 +17,7 @@ import {
   DayScheduleModal,
 } from './components';
 
-import { CALENDAR_COLORS, SCREEN_NAMES } from '@/constants';
+import { SCREEN_NAMES } from '@/constants';
 import {
   getInitialHolidays,
   getHolidaysForYears,
